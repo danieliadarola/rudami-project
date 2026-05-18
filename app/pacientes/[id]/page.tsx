@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { supabase } from '@/app/lib/supabase'
+import { createClient } from '@/app/lib/supabase-server'
 import BotonEliminarPaciente from '@/app/components/BotonEliminarPaciente'
 import SesionCard from '@/app/components/SesionCard'
 
@@ -7,6 +7,8 @@ export const revalidate = 0
 
 export default async function FichaPaciente({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+
+  const supabase = await createClient()
 
   const { data: paciente } = await supabase
     .from('pacientes')

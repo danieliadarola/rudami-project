@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/app/lib/supabase-server'
 import { redirect } from 'next/navigation'
+import MenuPaciente from '@/app/components/MenuPaciente'
 
 export const revalidate = 0
 
@@ -141,24 +142,23 @@ export default async function Dashboard() {
           ) : (
             <div className="divide-y divide-gray-100">
               {pacientes.map((paciente) => (
-                <Link
-                  key={paciente.id}
-                  href={`/pacientes/${paciente.id}`}
-                  className="flex items-center justify-between py-4 hover:bg-gray-50 px-2 rounded-lg transition-colors"
-                >
-                  <div>
+                <div key={paciente.id} className="flex items-center justify-between py-4 px-2 hover:bg-gray-50 rounded-lg transition-colors">
+                  <Link
+                    href={`/pacientes/${paciente.id}`}
+                    className="flex-1"
+                  >
                     <p className="font-medium text-gray-900">
                       {paciente.nombre} {paciente.apellidos}
                     </p>
                     <p className="text-sm text-gray-500 mt-0.5">
                       {paciente.motivo_consulta}
                     </p>
-                  </div>
-                  <div className="text-right">
+                  </Link>
+                  <div className="flex items-center gap-3">
                     <p className="text-sm text-gray-400">{paciente.telefono}</p>
-                    <p className="text-xs text-blue-500 mt-1">Ver ficha →</p>
+                    <MenuPaciente id={paciente.id} />
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}
