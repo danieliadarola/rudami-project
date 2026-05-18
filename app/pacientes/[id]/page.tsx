@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/app/lib/supabase-server'
 import BotonEliminarPaciente from '@/app/components/BotonEliminarPaciente'
 import SesionCard from '@/app/components/SesionCard'
+import GraficaEVA from '@/app/components/GraficaEVA'
 
 export const revalidate = 0
 
@@ -91,6 +92,12 @@ export default async function FichaPaciente({ params }: { params: Promise<{ id: 
             </div>
           )}
         </div>
+
+        {sesiones && sesiones.length >= 2 && (
+          <div className="mb-6">
+            <GraficaEVA sesiones={sesiones} />
+          </div>
+        )}
 
         <div className="space-y-3">
           <div className="flex items-center justify-between mb-2">
