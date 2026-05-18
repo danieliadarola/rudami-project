@@ -29,7 +29,18 @@ export default function NuevoPaciente() {
     setLoading(true)
     setError('')
 
-    const { error } = await supabase.from('pacientes').insert([form])
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      setError('No hay sesión activa.')
+      setLoading(false)
+      return
+    }
+
+    const { error } = await supabase.from('pacientes').insert([{
+      ...form,
+      user_id: user.id,
+    }])
 
     if (error) {
       setError('Error al guardar el paciente. Inténtalo de nuevo.')

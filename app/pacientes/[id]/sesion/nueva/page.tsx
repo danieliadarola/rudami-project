@@ -96,6 +96,8 @@ export default function NuevaSesion({ params }: { params: Promise<{ id: string }
     setError('')
 
     try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+
       let informe_ia = ''
 
       const response = await fetch('/api/generar-informe', {
@@ -123,6 +125,7 @@ export default function NuevaSesion({ params }: { params: Promise<{ id: string }
 
       const { error } = await supabase.from('sesiones').insert([{
         paciente_id: id,
+        user_id: currentUser?.id,
         anamnesis: form.anamnesis,
         factores_agravantes: form.factores_agravantes,
         factores_calmantes: form.factores_calmantes,
@@ -371,7 +374,6 @@ export default function NuevaSesion({ params }: { params: Promise<{ id: string }
           </form>
 
           <div className="lg:col-span-2 space-y-4">
-
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden sticky top-6">
               <div className="p-4 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">

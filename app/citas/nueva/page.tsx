@@ -37,10 +37,13 @@ export default function NuevaCita() {
     setLoading(true)
     setError('')
 
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+
     const fecha_hora = new Date(`${form.fecha}T${form.hora}:00`)
 
     const { error } = await supabase.from('citas').insert([{
       paciente_id: form.paciente_id,
+      user_id: currentUser?.id,
       fecha_hora: fecha_hora.toISOString(),
       duracion_min: parseInt(form.duracion_min),
       notas: form.notas,
