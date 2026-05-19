@@ -35,6 +35,13 @@ export default function Login() {
       <div className="w-full max-w-md">
 
         <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <img
+              src="/logo.png"
+              alt="Logo"
+              style={{ width: '120px', height: '120px', objectFit: 'contain' }}
+            />
+          </div>
           <h1 className="text-3xl font-bold text-gray-900">RuDaMi Project</h1>
           <p className="text-gray-500 mt-2">Accede a tu panel clínico</p>
         </div>
