@@ -1,8 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/app/lib/supabase-server'
 import BotonEliminarPaciente from '@/app/components/BotonEliminarPaciente'
-import SesionCard from '@/app/components/SesionCard'
-import GraficaEVA from '@/app/components/GraficaEVA'
+import EpisodioCard from '@/app/components/EpisodioCard'
 
 export const revalidate = 0
 
@@ -16,6 +15,12 @@ export default async function FichaPaciente({ params }: { params: Promise<{ id: 
     .select('*')
     .eq('id', id)
     .single()
+
+  const { data: episodios } = await supabase
+    .from('episodios')
+    .select('*')
+    .eq('paciente_id', id)
+    .order('created_at', { ascending: false })
 
   const { data: sesiones } = await supabase
     .from('sesiones')
@@ -58,10 +63,10 @@ export default async function FichaPaciente({ params }: { params: Promise<{ id: 
                 Editar
               </Link>
               <Link
-                href={`/pacientes/${id}/sesion/nueva`}
+                href={`/pacientes/${id}/episodio/nuevo`}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
               >
-                + Nueva sesión
+                + Nueva consulta
               </Link>
             </div>
           </div>
@@ -93,31 +98,30 @@ export default async function FichaPaciente({ params }: { params: Promise<{ id: 
           )}
         </div>
 
-        {sesiones && sesiones.length >= 2 && (
-          <div className="mb-6">
-            <GraficaEVA sesiones={sesiones} />
-          </div>
-        )}
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between mb-2">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">
-              Historial de sesiones
+              Consultas clínicas
               <span className="ml-2 text-sm font-normal text-gray-400">
-                ({sesiones?.length ?? 0})
+                ({episodios?.length ?? 0})
               </span>
             </h2>
           </div>
 
-          {!sesiones || sesiones.length === 0 ? (
+          {!episodios || episodios.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <p className="text-gray-400 text-sm text-center py-4">
-                No hay sesiones registradas. Crea la primera.
+                No hay sesiones registradas. Crea la primera con el botón de arriba.
               </p>
             </div>
           ) : (
-            sesiones.map((sesion) => (
-              <SesionCard key={sesion.id} sesion={sesion} paciente={paciente} />
+            episodios.map((episodio) => (
+              <EpisodioCard
+                key={episodio.id}
+                episodio={episodio}
+                sesiones={sesiones || []}
+                paciente={paciente}
+              />
             ))
           )}
         </div>
