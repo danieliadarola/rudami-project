@@ -4,23 +4,20 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/app/lib/supabase'
 
-export default function BotonCerrarEpisodio({ id }: { id: string }) {
+export default function BotonEliminarSesion({ id }: { id: string }) {
   const router = useRouter()
   const [confirmando, setConfirmando] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const handleCerrar = async () => {
+  const handleEliminar = async () => {
     setLoading(true)
-    const hoy = new Date()
-    const fecha_fin = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
-
     const { error } = await supabase
-      .from('episodios')
-      .update({ estado: 'cerrado', fecha_fin })
+      .from('sesiones')
+      .delete()
       .eq('id', id)
 
     if (error) {
-      alert('Error al cerrar la consulta.')
+      alert('Error al eliminar la sesión.')
       setLoading(false)
       return
     }
@@ -30,7 +27,7 @@ export default function BotonCerrarEpisodio({ id }: { id: string }) {
   if (confirmando) {
     return (
       <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-        <span className="text-xs text-gray-600">¿Cerrar consulta?</span>
+        <span className="text-xs text-red-600">¿Eliminar sesión?</span>
         <button
           onClick={() => setConfirmando(false)}
           className="text-xs border border-gray-300 text-gray-600 px-2 py-1 rounded-lg hover:bg-gray-50"
@@ -38,11 +35,11 @@ export default function BotonCerrarEpisodio({ id }: { id: string }) {
           No
         </button>
         <button
-          onClick={handleCerrar}
+          onClick={handleEliminar}
           disabled={loading}
-          className="text-xs bg-gray-600 text-white px-2 py-1 rounded-lg hover:bg-gray-700 disabled:opacity-50"
+          className="text-xs bg-red-600 text-white px-2 py-1 rounded-lg hover:bg-red-700 disabled:opacity-50"
         >
-          {loading ? '...' : 'Sí, cerrar'}
+          {loading ? '...' : 'Sí'}
         </button>
       </div>
     )
@@ -54,9 +51,9 @@ export default function BotonCerrarEpisodio({ id }: { id: string }) {
         e.stopPropagation()
         setConfirmando(true)
       }}
-      className="text-xs border border-gray-200 text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-50"
+      className="text-xs border border-red-200 text-red-400 px-2 py-1 rounded-lg hover:bg-red-50"
     >
-      Cerrar consulta
+      Eliminar
     </button>
   )
 }

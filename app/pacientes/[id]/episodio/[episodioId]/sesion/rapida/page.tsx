@@ -6,17 +6,26 @@ import { supabase } from '@/app/lib/supabase'
 
 interface CopiloResponse {
   hipotesis_principal: string
+  tejidos_implicados: string[]
+  clasificacion_dolor: string
+  fase_clinica: string
+  irritabilidad: string
   diagnostico_diferencial: string[]
   red_flags: string[]
-  tests_sugeridos: string[]
-  preguntas_sugeridas: string[]
-  estructuras_implicadas: string[]
+  yellow_flags: string[]
   derivacion: boolean
   derivacion_motivo: string
+  derivacion_urgencia: string
+  tests_sugeridos: string[]
+  pruebas_neurodinamicas: string[]
+  escalas_funcionales: string[]
+  preguntas_sugeridas: { pregunta: string, campo: string }[]
+  estructuras_implicadas: string[]
   nivel_alerta: 'verde' | 'amarillo' | 'rojo'
+  razonamiento_clinico: string
 }
 
-export default function NuevaSesionEpisodio({ params }: { params: Promise<{ id: string, episodioId: string }> }) {
+export default function ValoracionRapidaPrimera({ params }: { params: Promise<{ id: string, episodioId: string }> }) {
   const { id, episodioId } = use(params)
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -25,14 +34,13 @@ export default function NuevaSesionEpisodio({ params }: { params: Promise<{ id: 
   const [analizando, setAnalizando] = useState(false)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [paciente, setPaciente] = useState<any>(null)
-  const [ultimaSesion, setUltimaSesion] = useState<any>(null)
 
   const [form, setForm] = useState({
+    motivo_consulta: '',
     anamnesis: '',
     factores_agravantes: '',
     factores_calmantes: '',
     irradiacion: '',
-    contexto_biopsicosocial: '',
     exploracion_fisica: '',
     tests_ortopedicos: '',
     dolor_eva: '0',
@@ -41,38 +49,15 @@ export default function NuevaSesionEpisodio({ params }: { params: Promise<{ id: 
 
   useEffect(() => {
     const cargar = async () => {
-      const { data: pacienteData } = await supabase
+      const { data } = await supabase
         .from('pacientes')
         .select('*')
         .eq('id', id)
         .single()
-      setPaciente(pacienteData)
-
-      const { data: sesiones } = await supabase
-        .from('sesiones')
-        .select('*')
-        .eq('episodio_id', episodioId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-
-      if (sesiones && sesiones.length > 0) {
-        const ultima = sesiones[0]
-        setUltimaSesion(ultima)
-        setForm({
-          anamnesis: '',
-          factores_agravantes: ultima.factores_agravantes || '',
-          factores_calmantes: ultima.factores_calmantes || '',
-          irradiacion: ultima.irradiacion || '',
-          contexto_biopsicosocial: ultima.contexto_biopsicosocial || '',
-          exploracion_fisica: ultima.exploracion_fisica || '',
-          tests_ortopedicos: ultima.tests_ortopedicos || '',
-          dolor_eva: ultima.dolor_eva?.toString() || '0',
-          notas: '',
-        })
-      }
+      setPaciente(data)
     }
     cargar()
-  }, [id, episodioId])
+  }, [id])
 
   const analizarConCopiloto = async (formActual: typeof form) => {
     if (!paciente) return
@@ -83,13 +68,12 @@ export default function NuevaSesionEpisodio({ params }: { params: Promise<{ id: 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           modo: 'copiloto',
-          motivo_consulta: paciente.motivo_consulta,
+          motivo_consulta: formActual.motivo_consulta || paciente.motivo_consulta,
           antecedentes: paciente.antecedentes,
           anamnesis: formActual.anamnesis,
           factores_agravantes: formActual.factores_agravantes,
           factores_calmantes: formActual.factores_calmantes,
           irradiacion: formActual.irradiacion,
-          contexto_biopsicosocial: formActual.contexto_biopsicosocial,
           dolor_eva: formActual.dolor_eva,
         }),
       })
@@ -122,19 +106,17 @@ export default function NuevaSesionEpisodio({ params }: { params: Promise<{ id: 
       const { data: { user: currentUser } } = await supabase.auth.getUser()
 
       let informe_ia = ''
-
       const response = await fetch('/api/generar-informe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          modo: 'informe',
-          motivo_consulta: paciente?.motivo_consulta || '',
-          antecedentes: paciente?.antecedentes || '',
+          modo: 'informe_rapido',
+          motivo_consulta: form.motivo_consulta || paciente?.motivo_consulta,
+          antecedentes: paciente?.antecedentes,
           anamnesis: form.anamnesis,
           factores_agravantes: form.factores_agravantes,
           factores_calmantes: form.factores_calmantes,
           irradiacion: form.irradiacion,
-          contexto_biopsicosocial: form.contexto_biopsicosocial,
           exploracion_fisica: form.exploracion_fisica,
           tests_ortopedicos: form.tests_ortopedicos,
           dolor_eva: form.dolor_eva,
@@ -154,7 +136,6 @@ export default function NuevaSesionEpisodio({ params }: { params: Promise<{ id: 
         factores_agravantes: form.factores_agravantes,
         factores_calmantes: form.factores_calmantes,
         irradiacion: form.irradiacion,
-        contexto_biopsicosocial: form.contexto_biopsicosocial,
         exploracion_fisica: form.exploracion_fisica,
         tests_ortopedicos: form.tests_ortopedicos,
         dolor_eva: parseInt(form.dolor_eva),
@@ -191,15 +172,18 @@ export default function NuevaSesionEpisodio({ params }: { params: Promise<{ id: 
     <main className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
 
-        <div className="mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <button onClick={() => router.back()} className="text-sm text-blue-500 hover:underline">
-            ← Volver a la ficha
+            ← Volver
           </button>
+          <span className="text-xs text-gray-400 bg-white border border-gray-200 px-3 py-1 rounded-full">
+            Valoración rápida · Primera sesión
+          </span>
         </div>
 
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Nueva sesión</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Valoración rápida</h1>
             <p className="text-gray-500 text-sm mt-0.5">
               {paciente ? `${paciente.nombre} ${paciente.apellidos}` : '...'}
             </p>
@@ -208,110 +192,87 @@ export default function NuevaSesionEpisodio({ params }: { params: Promise<{ id: 
             <span className={`text-xs px-3 py-1.5 rounded-full border font-medium ${colorAlerta[copiloto.nivel_alerta]}`}>
               {copiloto.nivel_alerta === 'verde' && 'Sin alertas'}
               {copiloto.nivel_alerta === 'amarillo' && 'Requiere atención'}
-              {copiloto.nivel_alerta === 'rojo' && 'Alerta clínica'}
+              {copiloto.nivel_alerta === 'rojo' && '⚠ Alerta clínica'}
             </span>
           )}
         </div>
-
-        {ultimaSesion && (
-          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6">
-            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">
-              Continuando desde la sesión anterior
-            </p>
-            <p className="text-sm text-blue-800">
-              Los campos se han precargado con los datos de la última sesión. Solo actualiza lo que haya cambiado.
-            </p>
-          </div>
-        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
 
           <form onSubmit={handleSubmit} className="lg:col-span-3 space-y-4">
 
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">Anamnesis</h2>
+              <h2 className="text-sm font-semibold text-gray-900 mb-4">Motivo y síntomas</h2>
 
               <div className="mb-4">
-                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-                  Evolución desde la última sesión *
-                </label>
+                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Motivo de consulta *</label>
+                <textarea
+                  name="motivo_consulta"
+                  required
+                  value={form.motivo_consulta}
+                  onChange={handleChange}
+                  rows={2}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="¿Por qué viene el paciente?"
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Descripción de síntomas *</label>
                 <textarea
                   name="anamnesis"
                   required
                   value={form.anamnesis}
                   onChange={handleChange}
-                  rows={4}
+                  rows={3}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="¿Cómo ha evolucionado el paciente desde la última visita? ¿Qué ha cambiado?"
+                  placeholder="Describe brevemente los síntomas principales..."
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-                    Factores agravantes
-                  </label>
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Agravantes</label>
                   <textarea
                     name="factores_agravantes"
                     value={form.factores_agravantes}
                     onChange={handleChange}
                     rows={2}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="¿Qué empeora el dolor?"
+                    placeholder="¿Qué empeora?"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-                    Factores calmantes
-                  </label>
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Calmantes</label>
                   <textarea
                     name="factores_calmantes"
                     value={form.factores_calmantes}
                     onChange={handleChange}
                     rows={2}
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="¿Qué alivia el dolor?"
+                    placeholder="¿Qué alivia?"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-                    Irradiación
-                  </label>
-                  <textarea
-                    name="irradiacion"
-                    value={form.irradiacion}
-                    onChange={handleChange}
-                    rows={2}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="¿Irradia a alguna zona?"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-                    Contexto biopsicosocial
-                  </label>
-                  <textarea
-                    name="contexto_biopsicosocial"
-                    value={form.contexto_biopsicosocial}
-                    onChange={handleChange}
-                    rows={2}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Trabajo, estrés, situación personal..."
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Irradiación</label>
+                <textarea
+                  name="irradiacion"
+                  value={form.irradiacion}
+                  onChange={handleChange}
+                  rows={1}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="¿Irradia? ¿A dónde?"
+                />
               </div>
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">Exploración física</h2>
+              <h2 className="text-sm font-semibold text-gray-900 mb-4">Exploración básica</h2>
 
               <div className="mb-4">
-                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-                  Hallazgos exploración *
-                </label>
+                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Hallazgos principales *</label>
                 <textarea
                   name="exploracion_fisica"
                   required
@@ -319,16 +280,16 @@ export default function NuevaSesionEpisodio({ params }: { params: Promise<{ id: 
                   onChange={handleChange}
                   rows={3}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Rango de movimiento, palpación, postura, hallazgos relevantes..."
+                  placeholder="Hallazgos más relevantes de la exploración..."
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-                  Tests ortopédicos
+                  Tests realizados
                   {copiloto && copiloto.tests_sugeridos.length > 0 && (
                     <span className="ml-2 text-blue-500 font-normal normal-case">
-                      · IA sugiere: {copiloto.tests_sugeridos.slice(0, 3).join(', ')}
+                      · IA sugiere: {copiloto.tests_sugeridos.slice(0, 2).join(', ')}
                     </span>
                   )}
                 </label>
@@ -336,17 +297,16 @@ export default function NuevaSesionEpisodio({ params }: { params: Promise<{ id: 
                   name="tests_ortopedicos"
                   value={form.tests_ortopedicos}
                   onChange={handleChange}
-                  rows={3}
+                  rows={2}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Lasègue, Slump, Kemp... y sus resultados"
+                  placeholder="Tests y resultados..."
                 />
               </div>
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="text-sm font-semibold text-gray-900 mb-4">Valoración del dolor</h2>
               <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-                Escala EVA: <span className="text-blue-600 font-bold text-sm normal-case">{form.dolor_eva}/10</span>
+                EVA: <span className="text-blue-600 font-bold text-sm normal-case">{form.dolor_eva}/10</span>
               </label>
               <input
                 name="dolor_eva"
@@ -366,16 +326,14 @@ export default function NuevaSesionEpisodio({ params }: { params: Promise<{ id: 
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-                Notas de esta sesión
-              </label>
+              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Notas</label>
               <textarea
                 name="notas"
                 value={form.notas}
                 onChange={handleChange}
                 rows={2}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Observaciones, técnicas aplicadas, ejercicios indicados..."
+                placeholder="Observaciones, plan de tratamiento inicial..."
               />
             </div>
 
@@ -383,9 +341,7 @@ export default function NuevaSesionEpisodio({ params }: { params: Promise<{ id: 
 
             {loading && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-blue-600 text-sm text-center">
-                  Generando informe clínico con IA...
-                </p>
+                <p className="text-blue-600 text-sm text-center">Generando informe con IA...</p>
               </div>
             )}
 
@@ -402,7 +358,7 @@ export default function NuevaSesionEpisodio({ params }: { params: Promise<{ id: 
                 disabled={loading}
                 className="flex-1 bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
               >
-                {loading ? 'Guardando...' : 'Guardar sesión y generar informe'}
+                {loading ? 'Guardando...' : 'Guardar y generar informe'}
               </button>
             </div>
 
@@ -420,25 +376,24 @@ export default function NuevaSesionEpisodio({ params }: { params: Promise<{ id: 
                 </span>
               </div>
 
-              <div className="p-4 max-h-screen overflow-y-auto">
+              <div className="p-4 space-y-4 max-h-[80vh] overflow-y-auto">
                 {!copiloto && !analizando && (
                   <div className="text-center py-8">
                     <p className="text-gray-400 text-sm">El copiloto se activará cuando empieces a escribir.</p>
-                    <p className="text-gray-300 text-xs mt-2">Análisis automático cada 2 segundos</p>
                   </div>
                 )}
 
                 {analizando && !copiloto && (
                   <div className="text-center py-8">
-                    <p className="text-yellow-500 text-sm">Analizando datos clínicos...</p>
+                    <p className="text-yellow-500 text-sm">Analizando...</p>
                   </div>
                 )}
 
                 {copiloto && (
-                  <div className="space-y-4">
+                  <>
                     {copiloto.red_flags.length > 0 && (
                       <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                        <p className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-2">Red flags</p>
+                        <p className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-2">🚩 Red flags</p>
                         {copiloto.red_flags.map((flag, i) => (
                           <p key={i} className="text-sm text-red-700 mb-1">· {flag}</p>
                         ))}
@@ -447,7 +402,9 @@ export default function NuevaSesionEpisodio({ params }: { params: Promise<{ id: 
 
                     {copiloto.derivacion && (
                       <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                        <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide mb-1">Derivación sugerida</p>
+                        <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide mb-1">
+                          Derivación {copiloto.derivacion_urgencia === 'urgente' ? '🔴 urgente' : 'recomendada'}
+                        </p>
                         <p className="text-sm text-orange-700">{copiloto.derivacion_motivo}</p>
                       </div>
                     )}
@@ -459,23 +416,28 @@ export default function NuevaSesionEpisodio({ params }: { params: Promise<{ id: 
                       </div>
                     </div>
 
+                    {copiloto.preguntas_sugeridas.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Preguntas sugeridas</p>
+                        <div className="space-y-2">
+                          {copiloto.preguntas_sugeridas.map((p, i) => {
+                            const pregunta = typeof p === 'string' ? p : p.pregunta
+                            return (
+                              <div key={i} className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                                <p className="text-xs text-blue-800">{pregunta}</p>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     {copiloto.diagnostico_diferencial.length > 0 && (
                       <div>
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Diagnóstico diferencial</p>
                         <div className="flex flex-wrap gap-1">
                           {copiloto.diagnostico_diferencial.map((d, i) => (
                             <span key={i} className="text-xs bg-purple-50 text-purple-800 px-2 py-1 rounded-full border border-purple-100">{d}</span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {copiloto.estructuras_implicadas.length > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Estructuras implicadas</p>
-                        <div className="flex flex-wrap gap-1">
-                          {copiloto.estructuras_implicadas.map((e, i) => (
-                            <span key={i} className="text-xs bg-blue-50 text-blue-800 px-2 py-1 rounded-full border border-blue-100">{e}</span>
                           ))}
                         </div>
                       </div>
@@ -492,17 +454,13 @@ export default function NuevaSesionEpisodio({ params }: { params: Promise<{ id: 
                       </div>
                     )}
 
-                    {copiloto.preguntas_sugeridas.length > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Preguntas sugeridas</p>
-                        <div className="space-y-1">
-                          {copiloto.preguntas_sugeridas.map((p, i) => (
-                            <div key={i} className="text-xs bg-blue-50 text-blue-800 px-3 py-2 rounded-lg border border-blue-100">{p}</div>
-                          ))}
-                        </div>
+                    {copiloto.razonamiento_clinico && (
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Razonamiento clínico</p>
+                        <p className="text-xs text-gray-600 leading-relaxed">{copiloto.razonamiento_clinico}</p>
                       </div>
                     )}
-                  </div>
+                  </>
                 )}
               </div>
             </div>

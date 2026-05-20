@@ -29,14 +29,13 @@ export default function EpisodioCard({ episodio, sesiones, paciente }: Props) {
 
   const urlNuevaSesion = esPrimeraSession
     ? `/pacientes/${paciente.id}/episodio/${episodio.id}/sesion/primera`
-    : `/pacientes/${paciente.id}/episodio/${episodio.id}/sesion/nueva`
+    : `/pacientes/${paciente.id}/episodio/${episodio.id}/sesion/primera`
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-4">
 
-      <button
+      <div className="p-5 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer"
         onClick={() => setAbierto(!abierto)}
-        className="w-full p-5 flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
       >
         <div className="flex items-center gap-3">
           <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
@@ -49,13 +48,12 @@ export default function EpisodioCard({ episodio, sesiones, paciente }: Props) {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
           {episodio.estado === 'activo' && (
             <>
               <BotonCerrarEpisodio id={episodio.id} />
               <Link
                 href={urlNuevaSesion}
-                onClick={(e) => e.stopPropagation()}
                 className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700"
               >
                 {esPrimeraSession ? '+ Primera sesión' : '+ Nueva sesión'}
@@ -69,7 +67,7 @@ export default function EpisodioCard({ episodio, sesiones, paciente }: Props) {
           )}
           <span className="text-gray-400 text-sm ml-2">{abierto ? '▲' : '▼'}</span>
         </div>
-      </button>
+      </div>
 
       {abierto && (
         <div className="border-t border-gray-100">
