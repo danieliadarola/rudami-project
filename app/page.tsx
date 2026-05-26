@@ -16,10 +16,7 @@ export default function Login() {
     setLoading(true)
     setError('')
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
       setError('Email o contraseña incorrectos.')
@@ -31,61 +28,69 @@ export default function Login() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-8">
-      <div className="w-full max-w-md">
+    <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, SF Pro Display, sans-serif' }}>
 
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <img
-              src="/logo.png"
-              alt="Logo"
-              style={{ width: '120px', height: '120px', objectFit: 'contain' }}
-            />
+      <div style={{ width: '100%', maxWidth: '400px', padding: '0 24px' }}>
+
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <div style={{ width: '52px', height: '52px', background: '#3b82f6', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+            <span style={{ color: 'white', fontSize: '22px', fontWeight: '700' }}>R</span>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">RuDaMi Project</h1>
-          <p className="text-gray-500 mt-2">Accede a tu panel clínico</p>
+          <h1 style={{ fontSize: '24px', fontWeight: '700', color: 'white', letterSpacing: '-0.8px' }}>RuDaMi Project</h1>
+          <p style={{ fontSize: '14px', color: '#64748b', marginTop: '6px' }}>Accede a tu panel clínico</p>
         </div>
 
-        <form onSubmit={handleLogin} className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+        <form onSubmit={handleLogin} style={{ background: '#1e293b', borderRadius: '16px', padding: '28px', border: '1px solid #334155' }}>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px' }}>
+              Email
+            </label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="tu@email.com"
+              style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '10px', padding: '11px 14px', fontSize: '14px', color: 'white', outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px' }}>
+              Contraseña
+            </label>
             <input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="••••••••"
+              style={{ width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '10px', padding: '11px 14px', fontSize: '14px', color: 'white', outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
 
           {error && (
-            <p className="text-red-500 text-sm">{error}</p>
+            <div style={{ background: '#450a0a', border: '1px solid #7f1d1d', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px' }}>
+              <p style={{ fontSize: '13px', color: '#fca5a5', margin: 0 }}>{error}</p>
+            </div>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+            style={{ width: '100%', background: loading ? '#1d4ed8' : '#3b82f6', color: 'white', border: 'none', padding: '12px', borderRadius: '10px', fontSize: '14px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', letterSpacing: '-0.2px', transition: 'background 0.15s' }}
           >
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
 
         </form>
+
+        <p style={{ textAlign: 'center', fontSize: '12px', color: '#475569', marginTop: '24px' }}>
+          Inteligencia Artificial al servicio de los fisios
+        </p>
+
       </div>
-    </main>
+    </div>
   )
 }
