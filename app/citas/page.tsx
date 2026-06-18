@@ -161,10 +161,10 @@ export default function Calendario() {
   return (
     <AppShell>
       <div className="content-calendar">
-        <div style={{ display: 'grid', gridTemplateColumns: '210px 1fr', height: '100%' }}>
+        <div className="cal-grid" style={{ display: 'grid', gridTemplateColumns: '210px 1fr', height: '100%' }}>
 
           {/* ── Sidebar ── */}
-          <div style={{ background: 'var(--paper)', borderRight: '1px solid var(--hair-s)', padding: 16, overflowY: 'auto' }}>
+          <div className="cal-side" style={{ background: 'var(--paper)', borderRight: '1px solid var(--hair-s)', padding: 16, overflowY: 'auto' }}>
             <div style={{ marginBottom: 22 }}>
               <div className="cal-side-h">Fisioterapeutas</div>
               <div onClick={toggleTodos} className="cal-fisio-row">

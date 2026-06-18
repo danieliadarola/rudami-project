@@ -582,3 +582,70 @@ body {
 }
 .dictado-rec:hover { border-color: var(--danger); }
 .dictado-rec.on { background: var(--danger); color: #fff; border-color: var(--danger); animation: pulse 1.2s infinite; }
+
+/* ============================================================
+   RESPONSIVE — tablet y móvil
+   ============================================================ */
+.nav-burger { display: none; }
+.nav-scrim { display: none; }
+
+/* Tablet y móvil (≤ 900px) */
+@media (max-width: 900px) {
+  .nav-burger {
+    display: grid; place-items: center; position: fixed; top: 12px; left: 12px; z-index: 56;
+    width: 40px; height: 40px; border-radius: 10px; background: #fff; border: 1px solid var(--hair);
+    color: var(--ink); cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  }
+  .sidebar-v3 {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 250px; z-index: 58;
+    transform: translateX(-100%); transition: transform .25s cubic-bezier(.4,0,.2,1);
+    box-shadow: 0 0 50px rgba(22,24,31,.18);
+  }
+  .sidebar-v3.open { transform: none; }
+  .nav-scrim { display: block; position: fixed; inset: 0; z-index: 57; background: rgba(22,24,31,.32); animation: scrim-in .2s ease; }
+
+  /* Contenido y cabecera */
+  .dash-content { padding: 0 18px 40px; }
+  .topbar-v3 { flex-wrap: wrap; padding: 58px 18px 18px; gap: 14px; align-items: flex-start; }
+  .topbar-greet h1 { font-size: 23px; }
+  .topbar-actions { width: 100%; flex-wrap: wrap; }
+  .asist-trigger { flex: 1; min-width: 0; width: auto; }
+
+  /* Layouts de 2 columnas → 1 columna */
+  .dash-bento,
+  .pac-grid,
+  .sesion-layout { grid-template-columns: 1fr; gap: 28px; }
+  .dash-col { gap: 28px; }
+  .copiloto-panel { position: static; }
+  .modo-card-grid { grid-template-columns: 1fr; }
+  .stat-band { grid-template-columns: repeat(2, 1fr); }
+
+  /* Formularios y cabeceras de página */
+  .page-head { flex-wrap: wrap; gap: 12px; }
+  .form-grid-3 { grid-template-columns: 1fr; }
+
+  /* Agenda: ocultar barra lateral, calendario a ancho completo */
+  .cal-grid { grid-template-columns: 1fr !important; }
+  .cal-side { display: none !important; }
+  .content-calendar { height: calc(100dvh - 210px); min-height: 420px; }
+  .fc .fc-toolbar { flex-wrap: wrap; gap: 8px; }
+  .fc .fc-toolbar-title { font-size: 14px !important; }
+
+  /* Paneles / drawers */
+  .drawer { width: 100%; max-width: 420px; }
+}
+
+/* Móvil estrecho (≤ 560px) */
+@media (max-width: 560px) {
+  .dash-content { padding: 0 14px 36px; }
+  .topbar-greet h1 { font-size: 21px; }
+  .topbar-greet p { font-size: 12.5px; }
+  .stat-band { grid-template-columns: 1fr 1fr; }
+  .stat-cell { padding: 16px 16px 18px; }
+  .stat-num { font-size: 30px; }
+  .drawer, .asist-panel { width: 100%; max-width: 100%; border-left: none; }
+  .btn-ink, .btn-line { font-size: 13px; }
+  .modo-tabs { width: 100%; }
+  .modo-tab { flex: 1; text-align: center; }
+  .form-grid-2 { grid-template-columns: 1fr; }
+}
