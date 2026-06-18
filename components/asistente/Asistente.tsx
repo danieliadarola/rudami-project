@@ -34,7 +34,7 @@ export function Asistente({ open, onClose }: { open: boolean; onClose: () => voi
     setMessages(m => [...m, { role: 'assistant', content: '' }])
     setTyping(true)
     let i = 0
-    const paso = Math.max(1, Math.round(texto.length / 140))
+    const paso = Math.max(1, Math.round(texto.length / 180))
     typingRef.current = setInterval(() => {
       i += paso
       setMessages(m => {
@@ -43,7 +43,7 @@ export function Asistente({ open, onClose }: { open: boolean; onClose: () => voi
         return copy
       })
       if (i >= texto.length) { clearInterval(typingRef.current); typingRef.current = null; setTyping(false) }
-    }, 16)
+    }, 30)
   }
 
   const enviar = async (texto?: string) => {
