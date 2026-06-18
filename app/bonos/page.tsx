@@ -82,18 +82,29 @@ export default function BonosPage() {
       : filtro === 'activos' ? (e === 'activo' || e === 'por_caducar')
       : filtro === 'por_caducar' ? e === 'por_caducar'
       : (e === 'agotado' || e === 'caducado' || e === 'inactivo'))
+  const prioridad: Record<Estado, number> = { por_caducar: 0, activo: 1, agotado: 2, caducado: 3, inactivo: 4 }
+  visibles.sort((a, b) => {
+    const ra = a.b.total_sesiones - a.b.sesiones_usadas, rb = b.b.total_sesiones - b.b.sesiones_usadas
+    const ua = (a.e === 'activo' && ra <= 2 ? -0.5 : 0), ub = (b.e === 'activo' && rb <= 2 ? -0.5 : 0)
+    const pa = prioridad[a.e] + ua, pb = prioridad[b.e] + ub
+    if (pa !== pb) return pa - pb
+    const da = a.b.fecha_caducidad ? new Date(a.b.fecha_caducidad).getTime() : Infinity
+    const db = b.b.fecha_caducidad ? new Date(b.b.fecha_caducidad).getTime() : Infinity
+    return da - db
+  })
 
   const activos = conEstado.filter(({ e }) => e === 'activo' || e === 'por_caducar')
+  const restan = (b: Bono) => b.total_sesiones - b.sesiones_usadas
   const kpis = {
     activos: activos.length,
-    restantes: activos.reduce((s, { b }) => s + (b.total_sesiones - b.sesiones_usadas), 0),
-    usadas: bonos.reduce((s, b) => s + b.sesiones_usadas, 0),
+    porCaducar: conEstado.filter(({ e }) => e === 'por_caducar').length,
+    porAgotarse: activos.filter(({ b }) => restan(b) > 0 && restan(b) <= 2).length,
     ingresos: bonos.reduce((s, b) => s + (b.precio ?? 0), 0),
   }
-  const kpiList = [
+  const kpiList: { l: string; v: string; s: string; color?: string }[] = [
     { l: 'Bonos activos', v: String(kpis.activos), s: 'en vigor' },
-    { l: 'Sesiones restantes', v: String(kpis.restantes), s: 'por consumir' },
-    { l: 'Sesiones usadas', v: String(kpis.usadas), s: 'histórico' },
+    { l: 'Por caducar', v: String(kpis.porCaducar), s: 'en ≤ 30 días', color: kpis.porCaducar > 0 ? '#d97706' : undefined },
+    { l: 'Por agotarse', v: String(kpis.porAgotarse), s: '≤ 2 sesiones', color: kpis.porAgotarse > 0 ? '#dc2626' : undefined },
     ...(esAdmin ? [{ l: 'Ingresos por bonos', v: `${kpis.ingresos.toLocaleString('es-ES')}€`, s: 'total' }] : []),
   ]
   const ingresosPorFisio = esAdmin ? (() => {
@@ -130,7 +141,7 @@ export default function BonosPage() {
           {kpiList.map((k, i) => (
             <div className="stat-cell" key={k.l} style={i === 0 ? { borderLeft: 'none' } : undefined}>
               <div className="stat-lbl">{k.l}</div>
-              <div className="stat-num" style={{ fontSize: 30 }}>{k.v}</div>
+              <div className="stat-num" style={{ fontSize: 30, color: k.color ?? 'var(--ink)' }}>{k.v}</div>
               <div className="stat-delta">{k.s}</div>
             </div>
           ))}
@@ -184,9 +195,10 @@ export default function BonosPage() {
                   </div>
 
                   <div className="bono-foot">
-                    <span>
+                    <span style={{ color: (e === 'por_caducar' || e === 'caducado' || e === 'agotado') ? m.color : 'var(--muted)', fontWeight: (e === 'por_caducar' || e === 'agotado') ? 600 : 400 }}>
                       {e === 'caducado' ? 'Caducado'
                         : e === 'agotado' ? 'Sin sesiones'
+                        : restantes <= 2 ? `Quedan ${restantes} sesi${restantes === 1 ? 'ón' : 'ones'}`
                         : dias != null ? `Caduca en ${dias} día${dias !== 1 ? 's' : ''}` : 'Sin caducidad'}
                     </span>
                     {esAdmin && b.precio != null && <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{b.precio}€</span>}
