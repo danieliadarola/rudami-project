@@ -52,7 +52,7 @@ export default function BonosPage() {
   const [pacientes, setPacientes] = useState<any[]>([])
   const [clinicaId, setClinicaId] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
-  const [filtro, setFiltro] = useState<'activos' | 'por_caducar' | 'finalizados' | 'todos'>('activos')
+  const [filtro, setFiltro] = useState<'activos' | 'por_caducar' | 'por_agotarse' | 'finalizados' | 'todos'>('activos')
   const [modal, setModal] = useState(false)
   const [esAdmin, setEsAdmin] = useState(false)
   const [fisios, setFisios] = useState<any[]>([])
@@ -77,10 +77,11 @@ export default function BonosPage() {
   useEffect(() => { cargar() }, [cargar])
 
   const conEstado = bonos.map(b => ({ b, e: estadoDe(b) }))
-  const visibles = conEstado.filter(({ e }) =>
+  const visibles = conEstado.filter(({ b, e }) =>
     filtro === 'todos' ? true
       : filtro === 'activos' ? (e === 'activo' || e === 'por_caducar')
       : filtro === 'por_caducar' ? e === 'por_caducar'
+      : filtro === 'por_agotarse' ? ((e === 'activo' || e === 'por_caducar') && (b.total_sesiones - b.sesiones_usadas) > 0 && (b.total_sesiones - b.sesiones_usadas) <= 2)
       : (e === 'agotado' || e === 'caducado' || e === 'inactivo'))
   const prioridad: Record<Estado, number> = { por_caducar: 0, activo: 1, agotado: 2, caducado: 3, inactivo: 4 }
   visibles.sort((a, b) => {
@@ -101,10 +102,10 @@ export default function BonosPage() {
     porAgotarse: activos.filter(({ b }) => restan(b) > 0 && restan(b) <= 2).length,
     ingresos: bonos.reduce((s, b) => s + (b.precio ?? 0), 0),
   }
-  const kpiList: { l: string; v: string; s: string; color?: string }[] = [
-    { l: 'Bonos activos', v: String(kpis.activos), s: 'en vigor' },
-    { l: 'Por caducar', v: String(kpis.porCaducar), s: 'en ≤ 30 días', color: kpis.porCaducar > 0 ? '#d97706' : undefined },
-    { l: 'Por agotarse', v: String(kpis.porAgotarse), s: '≤ 2 sesiones', color: kpis.porAgotarse > 0 ? '#dc2626' : undefined },
+  const kpiList: { l: string; v: string; s: string; color?: string; f?: 'activos' | 'por_caducar' | 'por_agotarse' }[] = [
+    { l: 'Bonos activos', v: String(kpis.activos), s: 'en vigor', f: 'activos' },
+    { l: 'Por caducar', v: String(kpis.porCaducar), s: 'en ≤ 30 días', color: kpis.porCaducar > 0 ? '#d97706' : undefined, f: 'por_caducar' },
+    { l: 'Por agotarse', v: String(kpis.porAgotarse), s: '≤ 2 sesiones', color: kpis.porAgotarse > 0 ? '#dc2626' : undefined, f: 'por_agotarse' },
     ...(esAdmin ? [{ l: 'Ingresos por bonos', v: `${kpis.ingresos.toLocaleString('es-ES')}€`, s: 'total' }] : []),
   ]
   const ingresosPorFisio = esAdmin ? (() => {
@@ -122,7 +123,7 @@ export default function BonosPage() {
 
   const FILTROS = [
     { k: 'activos', l: 'Activos' }, { k: 'por_caducar', l: 'Por caducar' },
-    { k: 'finalizados', l: 'Finalizados' }, { k: 'todos', l: 'Todos' },
+    { k: 'por_agotarse', l: 'Por agotarse' }, { k: 'finalizados', l: 'Finalizados' }, { k: 'todos', l: 'Todos' },
   ] as const
 
   return (
@@ -139,8 +140,16 @@ export default function BonosPage() {
         {/* KPIs */}
         <div className="stat-band" style={{ marginBottom: esAdmin ? 18 : 28, gridTemplateColumns: `repeat(${kpiList.length}, 1fr)` }}>
           {kpiList.map((k, i) => (
-            <div className="stat-cell" key={k.l} style={i === 0 ? { borderLeft: 'none' } : undefined}>
-              <div className="stat-lbl">{k.l}</div>
+            <div
+              className="stat-cell" key={k.l}
+              onClick={() => k.f && setFiltro(k.f)}
+              style={{
+                ...(i === 0 ? { borderLeft: 'none' } : {}),
+                cursor: k.f ? 'pointer' : 'default',
+                ...(k.f && filtro === k.f ? { background: '#f1f3f6' } : {}),
+              }}
+            >
+              <div className="stat-lbl">{k.l}{k.f && <span style={{ color: 'var(--faint)', marginLeft: 6 }}>↧</span>}</div>
               <div className="stat-num" style={{ fontSize: 30, color: k.color ?? 'var(--ink)' }}>{k.v}</div>
               <div className="stat-delta">{k.s}</div>
             </div>
