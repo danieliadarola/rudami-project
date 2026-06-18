@@ -107,11 +107,11 @@ export default function BonosPage() {
         <div className="page-head">
           <div>
             <h1 className="page-title">Bonos</h1>
-            <p className="page-sub">Vende packs del catálogo de la clínica. El uso se descuenta solo al registrar sesiones.</p>
+            <p className="page-sub">Añade packs del catálogo de la clínica. El uso se descuenta solo al registrar sesiones.</p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             {esAdmin && <Link href="/configuracion/tipos-bono" className="btn-line">Gestionar catálogo</Link>}
-            <button className="btn-ink" onClick={() => setModal(true)}>+ Vender bono</button>
+            <button className="btn-ink" onClick={() => setModal(true)}>+ Añadir bono</button>
           </div>
         </div>
 
@@ -202,7 +202,7 @@ function VenderBono({ clinicaId, pacientes, tiposBono, onClose, onCreado }: { cl
     <>
       <div className="drawer-scrim" onClick={onClose} />
       <div className="bono-modal">
-        <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--ink)', marginBottom: 4 }}>Vender bono</h2>
+        <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--ink)', marginBottom: 4 }}>Añadir bono</h2>
         <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 18 }}>Asigna un bono del catálogo a un paciente.</p>
 
         <label className="form-label">Paciente</label>
@@ -235,7 +235,7 @@ function VenderBono({ clinicaId, pacientes, tiposBono, onClose, onCreado }: { cl
 
         <div className="form-actions" style={{ justifyContent: 'flex-end', marginTop: 22 }}>
           <button className="btn-line" onClick={onClose}>Cancelar</button>
-          <button className="btn-ink" onClick={vender} disabled={guardando || !pacienteId || !tipo}>{guardando ? 'Vendiendo…' : 'Vender bono'}</button>
+          <button className="btn-ink" onClick={vender} disabled={guardando || !pacienteId || !tipo}>{guardando ? 'Añadiendo…' : 'Añadir bono'}</button>
         </div>
       </div>
     </>
