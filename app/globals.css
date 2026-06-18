@@ -653,3 +653,11 @@ body {
 /* Cursor de escritura del asistente */
 .asist-caret { display: inline-block; width: 7px; height: 14px; margin-left: 2px; background: var(--ink-2); vertical-align: text-bottom; animation: caret-blink 1s steps(1) infinite; border-radius: 1px; }
 @keyframes caret-blink { 50% { opacity: 0; } }
+
+/* Botón WhatsApp (MVP wa.me) */
+.btn-wa {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; width: 100%;
+  background: #25D366; color: #fff; font-weight: 600; font-size: 13.5px; border: none; border-radius: 10px;
+  cursor: pointer; font-family: inherit; transition: background .15s;
+}
+.btn-wa:hover { background: #1eb558; }
