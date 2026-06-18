@@ -9,7 +9,7 @@ interface Bono {
   id: string; paciente_id: string; total_sesiones: number; sesiones_usadas: number
   fecha_compra: string; fecha_caducidad: string | null; activo: boolean
   precio: number | null; titulo: string | null
-  pacientes?: { nombre: string; apellidos: string }
+  pacientes?: { nombre: string; apellidos: string; user_id?: string }
 }
 type Estado = 'activo' | 'por_caducar' | 'agotado' | 'caducado' | 'inactivo'
 const DIA = 86_400_000
@@ -54,18 +54,23 @@ export default function BonosPage() {
   const [cargando, setCargando] = useState(true)
   const [filtro, setFiltro] = useState<'activos' | 'por_caducar' | 'finalizados' | 'todos'>('activos')
   const [modal, setModal] = useState(false)
+  const [esAdmin, setEsAdmin] = useState(false)
+  const [fisios, setFisios] = useState<any[]>([])
 
   const cargar = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/'); return }
-    const { data: perfil } = await supabase.from('perfiles').select('clinica_id').eq('id', user.id).single()
+    const { data: perfil } = await supabase.from('perfiles').select('clinica_id, rol').eq('id', user.id).single()
     setClinicaId(perfil?.clinica_id ?? null)
-    const [{ data: bs }, { data: ps }] = await Promise.all([
-      supabase.from('bonos').select('*, pacientes(nombre, apellidos)').order('created_at', { ascending: false }),
+    setEsAdmin(perfil?.rol === 'admin')
+    const [{ data: bs }, { data: ps }, { data: fs }] = await Promise.all([
+      supabase.from('bonos').select('*, pacientes(nombre, apellidos, user_id)').order('created_at', { ascending: false }),
       supabase.from('pacientes').select('id, nombre, apellidos').order('apellidos'),
+      supabase.from('perfiles').select('id, nombre, apellidos').eq('clinica_id', perfil?.clinica_id),
     ])
     setBonos((bs ?? []) as Bono[])
     setPacientes(ps ?? [])
+    setFisios(fs ?? [])
     setCargando(false)
   }, [router])
 
@@ -85,6 +90,25 @@ export default function BonosPage() {
     usadas: bonos.reduce((s, b) => s + b.sesiones_usadas, 0),
     ingresos: bonos.reduce((s, b) => s + (b.precio ?? 0), 0),
   }
+  const kpiList = [
+    { l: 'Bonos activos', v: String(kpis.activos), s: 'en vigor' },
+    { l: 'Sesiones restantes', v: String(kpis.restantes), s: 'por consumir' },
+    { l: 'Sesiones usadas', v: String(kpis.usadas), s: 'histórico' },
+    ...(esAdmin ? [{ l: 'Ingresos por bonos', v: `${kpis.ingresos.toLocaleString('es-ES')}€`, s: 'total' }] : []),
+  ]
+  const ingresosPorFisio = esAdmin ? (() => {
+    const map = new Map<string, number>()
+    for (const b of bonos) {
+      const uid = b.pacientes?.user_id
+      if (!uid || !b.precio) continue
+      map.set(uid, (map.get(uid) ?? 0) + b.precio)
+    }
+    return Array.from(map.entries()).map(([uid, total]) => {
+      const fi = fisios.find(x => x.id === uid)
+      return { nombre: fi ? `${fi.nombre} ${fi.apellidos}` : '—', total }
+    }).sort((a, b) => b.total - a.total)
+  })() : []
+
   const FILTROS = [
     { k: 'activos', l: 'Activos' }, { k: 'por_caducar', l: 'Por caducar' },
     { k: 'finalizados', l: 'Finalizados' }, { k: 'todos', l: 'Todos' },
@@ -102,13 +126,8 @@ export default function BonosPage() {
         </div>
 
         {/* KPIs */}
-        <div className="stat-band" style={{ marginBottom: 28 }}>
-          {[
-            { l: 'Bonos activos', v: kpis.activos, s: 'en vigor' },
-            { l: 'Sesiones restantes', v: kpis.restantes, s: 'por consumir' },
-            { l: 'Sesiones usadas', v: kpis.usadas, s: 'histórico' },
-            { l: 'Ingresos por bonos', v: `${kpis.ingresos.toLocaleString('es-ES')}€`, s: 'total' },
-          ].map((k, i) => (
+        <div className="stat-band" style={{ marginBottom: esAdmin ? 18 : 28, gridTemplateColumns: `repeat(${kpiList.length}, 1fr)` }}>
+          {kpiList.map((k, i) => (
             <div className="stat-cell" key={k.l} style={i === 0 ? { borderLeft: 'none' } : undefined}>
               <div className="stat-lbl">{k.l}</div>
               <div className="stat-num" style={{ fontSize: 30 }}>{k.v}</div>
@@ -116,6 +135,17 @@ export default function BonosPage() {
             </div>
           ))}
         </div>
+
+        {esAdmin && ingresosPorFisio.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 26 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--faint)', marginRight: 4 }}>Ingresos por fisio</span>
+            {ingresosPorFisio.map(x => (
+              <span key={x.nombre} style={{ fontSize: 12.5, color: 'var(--ink-2)', background: 'var(--paper-2)', border: '1px solid var(--hair)', borderRadius: 999, padding: '5px 12px' }}>
+                {x.nombre} · <strong style={{ color: 'var(--ink)' }}>{x.total.toLocaleString('es-ES')}€</strong>
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Filtros */}
         <div className="modo-tabs" style={{ marginBottom: 22 }}>
@@ -159,7 +189,7 @@ export default function BonosPage() {
                         : e === 'agotado' ? 'Sin sesiones'
                         : dias != null ? `Caduca en ${dias} día${dias !== 1 ? 's' : ''}` : 'Sin caducidad'}
                     </span>
-                    {b.precio != null && <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{b.precio}€</span>}
+                    {esAdmin && b.precio != null && <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{b.precio}€</span>}
                   </div>
                 </div>
               )
