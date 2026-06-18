@@ -30,14 +30,16 @@ function estadoDe(b: Bono): Estado {
   return 'activo'
 }
 function Ring({ restantes, total, color }: { restantes: number; total: number; color: string }) {
-  const r = 34, c = 2 * Math.PI * r, frac = total > 0 ? Math.max(0, restantes) / total : 0
+  const r = 34, c = 2 * Math.PI * r
+  const usadas = total - Math.max(0, restantes)
+  const frac = total > 0 ? usadas / total : 0
   return (
     <svg width="86" height="86" viewBox="0 0 86 86">
       <circle cx="43" cy="43" r={r} fill="none" stroke="var(--hair)" strokeWidth="7" />
       <circle cx="43" cy="43" r={r} fill="none" stroke={color} strokeWidth="7" strokeLinecap="round"
         strokeDasharray={c} strokeDashoffset={c * (1 - frac)} transform="rotate(-90 43 43)"
         style={{ transition: 'stroke-dashoffset .7s cubic-bezier(.4,0,.2,1)' }} />
-      <text x="43" y="40" textAnchor="middle" fontSize="22" fontWeight="700" fill="var(--ink)">{Math.max(0, restantes)}</text>
+      <text x="43" y="40" textAnchor="middle" fontSize="22" fontWeight="700" fill="var(--accent)">{Math.max(0, restantes)}</text>
       <text x="43" y="55" textAnchor="middle" fontSize="9" fill="var(--faint)" letterSpacing="1">DE {total}</text>
     </svg>
   )
@@ -54,6 +56,7 @@ export default function BonosPage() {
   const [cargando, setCargando] = useState(true)
   const [filtro, setFiltro] = useState<'activos' | 'por_caducar' | 'por_agotarse' | 'finalizados' | 'todos'>('activos')
   const [modal, setModal] = useState(false)
+  const [fisioFiltro, setFisioFiltro] = useState<string | null>(null)
 
   const cargar = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -73,12 +76,14 @@ export default function BonosPage() {
   useEffect(() => { cargar() }, [cargar])
 
   const conEstado = bonos.map(b => ({ b, e: estadoDe(b) }))
-  const visibles = conEstado.filter(({ b, e }) =>
-    filtro === 'todos' ? true
+  const visibles = conEstado.filter(({ b, e }) => {
+    if (fisioFiltro && b.pacientes?.user_id !== fisioFiltro) return false
+    return filtro === 'todos' ? true
       : filtro === 'activos' ? (e === 'activo' || e === 'por_caducar')
       : filtro === 'por_caducar' ? e === 'por_caducar'
       : filtro === 'por_agotarse' ? ((e === 'activo' || e === 'por_caducar') && (b.total_sesiones - b.sesiones_usadas) > 0 && (b.total_sesiones - b.sesiones_usadas) <= 2)
-      : (e === 'agotado' || e === 'caducado' || e === 'inactivo'))
+      : (e === 'agotado' || e === 'caducado' || e === 'inactivo')
+  })
   const prio: Record<Estado, number> = { por_caducar: 0, activo: 1, agotado: 2, caducado: 3, inactivo: 4 }
   visibles.sort((a, b) => {
     const ra = a.b.total_sesiones - a.b.sesiones_usadas, rb = b.b.total_sesiones - b.b.sesiones_usadas
@@ -93,7 +98,7 @@ export default function BonosPage() {
   const ingresoFisio = esAdmin ? (() => {
     const m = new Map<string, number>()
     for (const b of bonos) { const u = b.pacientes?.user_id; if (u && b.precio) m.set(u, (m.get(u) ?? 0) + b.precio) }
-    return Array.from(m.entries()).map(([u, t]) => { const f = fisios.find(x => x.id === u); return { nombre: f ? `${f.nombre} ${f.apellidos}` : '—', t } }).sort((a, b) => b.t - a.t)
+    return Array.from(m.entries()).map(([u, t]) => { const f = fisios.find(x => x.id === u); return { uid: u, nombre: f ? `${f.nombre} ${f.apellidos}` : '—', t } }).sort((a, b) => b.t - a.t)
   })() : []
 
   const FILTROS = [
@@ -119,11 +124,18 @@ export default function BonosPage() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 22, paddingBottom: 18, borderBottom: '1px solid var(--hair-s)' }}>
             <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--faint)', marginRight: 4 }}>Ingresos</span>
             <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginRight: 8 }}>{ingresoTotal.toLocaleString('es-ES')}€</span>
-            {ingresoFisio.map(x => (
-              <span key={x.nombre} style={{ fontSize: 12.5, color: 'var(--ink-2)', background: 'var(--paper-2)', border: '1px solid var(--hair)', borderRadius: 999, padding: '5px 12px' }}>
-                {x.nombre} · <strong style={{ color: 'var(--ink)' }}>{x.t.toLocaleString('es-ES')}€</strong>
-              </span>
-            ))}
+            {ingresoFisio.map(x => {
+              const on = fisioFiltro === x.uid
+              return (
+                <button key={x.uid} onClick={() => setFisioFiltro(on ? null : x.uid)}
+                  style={{ fontFamily: 'inherit', cursor: 'pointer', fontSize: 12.5, transition: 'all .15s',
+                    color: on ? '#fff' : 'var(--ink-2)', background: on ? 'var(--ink)' : 'var(--paper-2)',
+                    border: `1px solid ${on ? 'var(--ink)' : 'var(--hair)'}`, borderRadius: 999, padding: '5px 12px' }}>
+                  {x.nombre} · <strong style={{ color: on ? '#fff' : 'var(--ink)' }}>{x.t.toLocaleString('es-ES')}€</strong>
+                </button>
+              )
+            })}
+            {fisioFiltro && <button onClick={() => setFisioFiltro(null)} style={{ fontFamily: 'inherit', cursor: 'pointer', fontSize: 12, color: 'var(--muted)', background: 'none', border: 'none' }}>✕ quitar filtro</button>}
           </div>
         )}
 
@@ -141,7 +153,7 @@ export default function BonosPage() {
               const restantes = b.total_sesiones - b.sesiones_usadas, m = META[e]
               const dias = b.fecha_caducidad ? Math.ceil((new Date(b.fecha_caducidad).getTime() - Date.now()) / DIA) : null
               return (
-                <div key={b.id} className="bono-card" onClick={() => router.push(`/pacientes/${b.paciente_id}`)} style={{ ['--ec' as any]: m.color }}>
+                <div key={b.id} className="bono-card" onClick={() => router.push(`/pacientes/${b.paciente_id}`)} style={{ ['--ec' as any]: 'var(--accent)' }}>
                   <div className="bono-top">
                     <div style={{ minWidth: 0 }}>
                       <p className="bono-pac">{b.pacientes?.nombre} {b.pacientes?.apellidos}</p>
@@ -150,10 +162,10 @@ export default function BonosPage() {
                     <span className="bono-badge" style={{ color: m.color, background: m.color + '18' }}>{m.label}</span>
                   </div>
                   <div className="bono-mid">
-                    <Ring restantes={restantes} total={b.total_sesiones} color={m.color} />
+                    <Ring restantes={restantes} total={b.total_sesiones} color="var(--accent)" />
                     <div className="bono-dots">
                       {Array.from({ length: b.total_sesiones }).map((_, i) => (
-                        <span key={i} className="bono-dot" style={{ background: i < b.sesiones_usadas ? 'var(--hair)' : m.color }} />
+                        <span key={i} className="bono-dot" style={{ background: i < b.sesiones_usadas ? 'var(--accent)' : 'var(--hair)' }} />
                       ))}
                     </div>
                   </div>
