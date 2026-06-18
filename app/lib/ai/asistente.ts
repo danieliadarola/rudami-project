@@ -61,6 +61,30 @@ export const TOOLS = [
 
 const esUuid = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(s)
 
+const tokens = (q: string) => q.trim().split(/\s+/).filter(Boolean)
+
+// Filtro OR por palabras: cada palabra puede aparecer en nombre o apellidos.
+function orPorPalabras(q: string): string {
+  const parts: string[] = []
+  for (const t of tokens(q)) {
+    const e = t.replace(/[%,()*]/g, '')
+    if (e) { parts.push(`nombre.ilike.%${e}%`, `apellidos.ilike.%${e}%`) }
+  }
+  const tel = q.replace(/[%,()*]/g, '')
+  if (tel) parts.push(`telefono.ilike.%${tel}%`, `email.ilike.%${tel}%`)
+  return parts.join(',')
+}
+
+// Ordena por nº de palabras de la búsqueda que aparecen en "nombre apellidos".
+function rankear<T extends { nombre: string; apellidos: string }>(rows: T[], q: string): T[] {
+  const ts = tokens(q).map(t => t.toLowerCase())
+  return [...rows].sort((a, b) => {
+    const fa = `${a.nombre} ${a.apellidos}`.toLowerCase()
+    const fb = `${b.nombre} ${b.apellidos}`.toLowerCase()
+    return ts.filter(t => fb.includes(t)).length - ts.filter(t => fa.includes(t)).length
+  })
+}
+
 async function resolverPaciente(supabase: any, ctx: Ctx, query: string): Promise<{ id: string; nombre: string } | null> {
   if (esUuid(query)) {
     const { data } = await supabase.from('pacientes').select('id, nombre, apellidos').eq('id', query).maybeSingle()
@@ -68,9 +92,10 @@ async function resolverPaciente(supabase: any, ctx: Ctx, query: string): Promise
   }
   const { data } = await supabase.from('pacientes')
     .select('id, nombre, apellidos')
-    .or(`nombre.ilike.%${query}%,apellidos.ilike.%${query}%`).limit(2)
+    .or(orPorPalabras(query)).limit(10)
   if (!data?.length) return null
-  return { id: data[0].id, nombre: `${data[0].nombre} ${data[0].apellidos}` }
+  const best: any = rankear(data, query)[0]
+  return { id: best.id, nombre: `${best.nombre} ${best.apellidos}` }
 }
 
 export async function ejecutarTool(name: string, args: any, supabase: any, ctx: Ctx): Promise<any> {
@@ -78,8 +103,8 @@ export async function ejecutarTool(name: string, args: any, supabase: any, ctx: 
     case 'buscar_paciente': {
       const { data } = await supabase.from('pacientes')
         .select('id, nombre, apellidos, telefono')
-        .or(`nombre.ilike.%${args.query}%,apellidos.ilike.%${args.query}%,telefono.ilike.%${args.query}%`).limit(6)
-      return { pacientes: data ?? [] }
+        .or(orPorPalabras(args.query)).limit(12)
+      return { pacientes: rankear(data ?? [], args.query).slice(0, 6) }
     }
     case 'listar_citas': {
       const dia = args.fecha || new Date().toISOString().split('T')[0]

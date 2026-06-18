@@ -18,13 +18,32 @@ export function Asistente({ open, onClose }: { open: boolean; onClose: () => voi
   const [vozOn, setVozOn] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const recRef = useRef<any>(null)
+  const typingRef = useRef<any>(null)
+  const [typing, setTyping] = useState(false)
 
-  useEffect(() => { scrollRef.current?.scrollTo({ top: 9e9, behavior: 'smooth' }) }, [messages, loading, pendiente])
+  useEffect(() => { scrollRef.current?.scrollTo({ top: 9e9 }) }, [messages, loading, pendiente])
 
   const hablar = (txt: string) => {
     if (!vozOn || typeof window === 'undefined' || !window.speechSynthesis) return
     const u = new SpeechSynthesisUtterance(txt.replace(/[*_#]/g, '')); u.lang = 'es-ES'
     window.speechSynthesis.cancel(); window.speechSynthesis.speak(u)
+  }
+
+  const escribirGradual = (texto: string) => {
+    if (typingRef.current) clearInterval(typingRef.current)
+    setMessages(m => [...m, { role: 'assistant', content: '' }])
+    setTyping(true)
+    let i = 0
+    const paso = Math.max(1, Math.round(texto.length / 140))
+    typingRef.current = setInterval(() => {
+      i += paso
+      setMessages(m => {
+        const copy = [...m]
+        copy[copy.length - 1] = { role: 'assistant', content: texto.slice(0, i) }
+        return copy
+      })
+      if (i >= texto.length) { clearInterval(typingRef.current); typingRef.current = null; setTyping(false) }
+    }, 16)
   }
 
   const enviar = async (texto?: string) => {
@@ -35,7 +54,7 @@ export function Asistente({ open, onClose }: { open: boolean; onClose: () => voi
     try {
       const r = await fetch('/api/asistente', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: nuevos }) })
       const d = await r.json()
-      setMessages(m => [...m, { role: 'assistant', content: d.mensaje ?? d.error ?? 'Sin respuesta.' }])
+      escribirGradual(d.mensaje ?? d.error ?? 'Sin respuesta.')
       if (d.pendiente) setPendiente(d.pendiente)
       else router.refresh()
       if (d.mensaje) hablar(d.mensaje)
@@ -50,7 +69,7 @@ export function Asistente({ open, onClose }: { open: boolean; onClose: () => voi
     try {
       const r = await fetch('/api/asistente', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirmar: pendiente }) })
       const d = await r.json()
-      setMessages(m => [...m, { role: 'assistant', content: d.mensaje ?? 'Hecho.' }]); router.refresh(); hablar(d.mensaje)
+      escribirGradual(d.mensaje ?? 'Hecho.'); router.refresh(); hablar(d.mensaje)
     } catch { setMessages(m => [...m, { role: 'assistant', content: 'Error al ejecutar.' }]) }
     setPendiente(null); setLoading(false)
   }
@@ -99,7 +118,10 @@ export function Asistente({ open, onClose }: { open: boolean; onClose: () => voi
           )}
 
           {messages.map((m, i) => (
-            <div key={i} className={`asist-msg ${m.role}`}>{m.content}</div>
+            <div key={i} className={`asist-msg ${m.role}`}>
+              {m.content}
+              {typing && m.role === 'assistant' && i === messages.length - 1 && <span className="asist-caret" />}
+            </div>
           ))}
 
           {pendiente && (
