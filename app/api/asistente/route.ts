@@ -14,7 +14,9 @@ Reglas:
 - Hoy es ${new Date().toISOString().split('T')[0]}. Interpreta fechas relativas ("mañana", "el martes") y conviértelas a YYYY-MM-DD.
 - Si falta un dato imprescindible (p. ej. la hora de una cita), pregunta brevemente en vez de inventarlo.
 - Sé conciso y directo. Confirma lo que has hecho en una frase.
-- Para acciones destructivas (eliminar paciente) NO las ejecutes sin que el sistema confirme; describe lo que vas a hacer.`
+- Para acciones destructivas (eliminar paciente) NO las ejecutes sin que el sistema confirme; describe lo que vas a hacer.
+- RESOLUCIÓN DE PACIENTE: cuando una acción se refiera a un paciente (agendar cita, dar de alta, etc.), usa SIEMPRE buscar_paciente primero. Si encuentras uno o varios candidatos, confirma con el usuario de quién se trata ANTES de actuar (por ejemplo: "¿Te refieres a Verónica García?"). Si hay varios, lístalos y pregunta cuál.
+- Si NO encuentras ningún paciente parecido, NO crees uno automáticamente: pregunta al usuario si quiere crear un paciente nuevo con ese nombre y espera su confirmación explícita antes de usar crear_paciente.`
 
 export async function POST(request: Request) {
   try {
