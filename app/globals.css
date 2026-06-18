@@ -692,17 +692,18 @@ body {
 .bono-preset:hover { border-color: var(--ink-2); }
 .bono-preset.on { background: var(--ink); color: #fff; border-color: var(--ink); }
 
-/* ── Catálogo de bonos (tabla + form a la derecha) ── */
-.cat-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
-.cat-form { position: sticky; top: 16px; }
+/* ── Catálogo de bonos (tabla compacta + form a la derecha) ── */
+.cat-layout { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
+.cat-table { flex: 0 1 auto; }
+.cat-form { flex: 1 1 300px; max-width: 420px; position: sticky; top: 16px; }
 .cat-grid {
   display: grid;
-  grid-template-columns: minmax(120px, 1.7fr) minmax(90px, 1fr) 70px 78px 64px 72px 34px;
+  grid-template-columns: 190px 140px 64px 80px 60px 72px 32px;
   gap: 8px; align-items: center;
 }
 .cat-head { padding: 0 2px 10px; border-bottom: 1px solid var(--hair-s); }
 .cat-head span { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
 .cat-row { padding: 8px 0; border-bottom: 1px solid var(--hair-s); }
 .cat-row:last-child { border-bottom: none; }
-.cat-row .form-input { padding: 7px 9px; font-size: 13px; }
-@media (max-width: 900px) { .cat-layout { grid-template-columns: 1fr; } .cat-form { position: static; } }
+.cat-grid .form-input { padding: 7px 9px; font-size: 13px; width: 100%; }
+@media (max-width: 820px) { .cat-form { position: static; max-width: 100%; } }

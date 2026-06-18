@@ -59,7 +59,7 @@ export default function TiposBonoPage() {
 
   return (
     <AppShell>
-      <div className="page-wrap" style={{ maxWidth: 900 }}>
+      <div className="page-wrap">
         <button onClick={() => router.push('/bonos')} className="back-link">← Volver a bonos</button>
         <div className="page-head">
           <div>
@@ -68,13 +68,13 @@ export default function TiposBonoPage() {
           </div>
         </div>
 
-        {/* Tabla */}
-        <div className="pac-card" style={{ padding: 18, overflowX: 'auto', marginBottom: 16 }}>
-          <div style={{ minWidth: 600 }}>
+        <div className="cat-layout">
+          {/* Tabla compacta */}
+          <div className="pac-card cat-table" style={{ padding: 18, overflowX: 'auto' }}>
             <div className="cat-grid cat-head">
-              <span>Nombre</span><span>Servicio</span><span>Sesiones</span><span>Precio €</span><span>Días</span><span>Estado</span><span></span>
+              <span>Nombre</span><span>Servicio</span><span>Ses.</span><span>Precio €</span><span>Días</span><span>Estado</span><span></span>
             </div>
-            {tipos.length === 0 && <p style={{ fontSize: 13, color: 'var(--faint)', padding: '16px 2px' }}>Aún no hay tipos de bono. Crea el primero abajo.</p>}
+            {tipos.length === 0 && <p style={{ fontSize: 13, color: 'var(--faint)', padding: '16px 2px' }}>Aún no hay tipos de bono. Crea el primero a la derecha.</p>}
             {tipos.map(t => (
               <div key={t.id} className="cat-grid cat-row" style={{ opacity: t.activo ? 1 : 0.5 }}>
                 <input value={t.nombre} onChange={e => actualizar(t.id, { nombre: e.target.value })} className="form-input" />
@@ -87,20 +87,24 @@ export default function TiposBonoPage() {
               </div>
             ))}
           </div>
-        </div>
 
-        {/* Formulario debajo */}
-        <div className="form-card">
-          <div className="form-card-title">Nuevo tipo de bono</div>
-          <div className="form-grid-2" style={{ marginBottom: 14 }}>
-            <div><label className="form-label">Nombre</label><input value={nuevo.nombre} onChange={e => setNuevo({ ...nuevo, nombre: e.target.value })} className="form-input" placeholder="Ej. Bono 10 · Fisioterapia" /></div>
-            <div><label className="form-label">Servicio</label><input value={nuevo.servicio} onChange={e => setNuevo({ ...nuevo, servicio: e.target.value })} className="form-input" placeholder="Fisioterapia, Diatermia, Pilates…" /></div>
-          </div>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-            <div><label className="form-label">Sesiones</label><input type="number" min={1} value={nuevo.total_sesiones} onChange={e => setNuevo({ ...nuevo, total_sesiones: e.target.value })} className="form-input" style={{ width: 100 }} /></div>
-            <div><label className="form-label">Precio €</label><input type="number" min={0} value={nuevo.precio} onChange={e => setNuevo({ ...nuevo, precio: e.target.value })} className="form-input" style={{ width: 110 }} /></div>
-            <div><label className="form-label">Días</label><input type="number" min={1} value={nuevo.validez_dias} onChange={e => setNuevo({ ...nuevo, validez_dias: e.target.value })} className="form-input" style={{ width: 100 }} /></div>
-            <button onClick={crear} disabled={guardando || !nuevo.nombre.trim()} className="btn-ink" style={{ marginLeft: 'auto' }}>{guardando ? 'Creando…' : '+ Añadir al catálogo'}</button>
+          {/* Formulario a la derecha */}
+          <div className="form-card cat-form">
+            <div className="form-card-title">Nuevo tipo de bono</div>
+            <div style={{ marginBottom: 14 }}>
+              <label className="form-label">Nombre</label>
+              <input value={nuevo.nombre} onChange={e => setNuevo({ ...nuevo, nombre: e.target.value })} className="form-input" placeholder="Ej. Bono 10 · Fisioterapia" />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label className="form-label">Servicio</label>
+              <input value={nuevo.servicio} onChange={e => setNuevo({ ...nuevo, servicio: e.target.value })} className="form-input" placeholder="Fisioterapia, Diatermia, Pilates…" />
+            </div>
+            <div className="form-grid-3" style={{ marginBottom: 18 }}>
+              <div><label className="form-label">Sesiones</label><input type="number" min={1} value={nuevo.total_sesiones} onChange={e => setNuevo({ ...nuevo, total_sesiones: e.target.value })} className="form-input" /></div>
+              <div><label className="form-label">Precio €</label><input type="number" min={0} value={nuevo.precio} onChange={e => setNuevo({ ...nuevo, precio: e.target.value })} className="form-input" /></div>
+              <div><label className="form-label">Días</label><input type="number" min={1} value={nuevo.validez_dias} onChange={e => setNuevo({ ...nuevo, validez_dias: e.target.value })} className="form-input" /></div>
+            </div>
+            <button onClick={crear} disabled={guardando || !nuevo.nombre.trim()} className="btn-ink" style={{ width: '100%', justifyContent: 'center' }}>{guardando ? 'Creando…' : '+ Añadir al catálogo'}</button>
           </div>
         </div>
       </div>
