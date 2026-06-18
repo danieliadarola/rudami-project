@@ -5,19 +5,23 @@ import Link from 'next/link'
 import SesionCard from './SesionCard'
 import GraficaEVA from './GraficaEVA'
 import BotonCerrarEpisodio from './BotonCerrarEpisodio'
+import { tendenciaEva, EVA_META } from '@/app/lib/dashboard/eva'
 
 interface Props {
   episodio: any
   sesiones: any[]
   paciente: any
+  fisios?: any[]
 }
 
-export default function EpisodioCard({ episodio, sesiones, paciente }: Props) {
+export default function EpisodioCard({ episodio, sesiones, paciente, fisios = [] }: Props) {
   const [abierto, setAbierto] = useState(true)
 
   const sesionesEpisodio = sesiones
     .filter(s => s.episodio_id === episodio.id)
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+
+  const tend = tendenciaEva(sesionesEpisodio)
 
   const esPrimeraSession = sesionesEpisodio.length === 0
 
@@ -32,7 +36,7 @@ export default function EpisodioCard({ episodio, sesiones, paciente }: Props) {
     : `/pacientes/${paciente.id}/episodio/${episodio.id}/sesion/primera`
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-4">
+    <div style={{ background: '#fff', border: '1px solid var(--hair)', borderRadius: 14, overflow: 'hidden' }}>
 
       <div className="p-5 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer"
         onClick={() => setAbierto(!abierto)}
@@ -42,7 +46,20 @@ export default function EpisodioCard({ episodio, sesiones, paciente }: Props) {
             episodio.estado === 'activo' ? 'bg-green-400' : 'bg-gray-300'
           }`} />
           <div>
-            <p className="font-semibold text-gray-900">{episodio.titulo}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <p className="font-semibold text-gray-900">{episodio.titulo}</p>
+              {tend && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  fontSize: 11, fontWeight: 600, lineHeight: 1,
+                  padding: '3px 8px', borderRadius: 999,
+                  color: EVA_META[tend.direccion].color,
+                  background: EVA_META[tend.direccion].color + '14',
+                }}>
+                  {EVA_META[tend.direccion].flecha} EVA {EVA_META[tend.direccion].label} · {tend.inicial}→{tend.ultima}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-gray-400 mt-0.5">
               Desde {fechaInicio} · {sesionesEpisodio.length} sesión{sesionesEpisodio.length !== 1 ? 'es' : ''}
             </p>
@@ -54,7 +71,7 @@ export default function EpisodioCard({ episodio, sesiones, paciente }: Props) {
               <BotonCerrarEpisodio id={episodio.id} />
               <Link
                 href={urlNuevaSesion}
-                className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700"
+                style={{ fontSize: 12, fontWeight: 600, background: 'var(--ink)', color: '#fff', padding: '6px 12px', borderRadius: 9, textDecoration: 'none' }}
               >
                 {esPrimeraSession ? '+ Primera sesión' : '+ Nueva sesión'}
               </Link>
@@ -92,7 +109,7 @@ export default function EpisodioCard({ episodio, sesiones, paciente }: Props) {
           ) : (
             <div className="p-5 space-y-3">
               {[...sesionesEpisodio].reverse().map((sesion) => (
-                <SesionCard key={sesion.id} sesion={sesion} paciente={paciente} />
+                <SesionCard key={sesion.id} sesion={sesion} paciente={paciente} fisios={fisios} />
               ))}
             </div>
           )}

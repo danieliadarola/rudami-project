@@ -1,176 +1,269 @@
 'use client'
+// Nueva sesión unificada: 3 modos en tarjetas, formulario dinámico, EVA slider,
+// informe IA al guardar y descuento automático del bono.
 
 import { useState, use, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/app/lib/supabase'
+import { AppShell } from '@/components/layout/AppShell'
+import { DI } from '@/components/ui/DashboardIcons'
+import { EvaSlider } from '@/components/sesion/EvaSlider'
+import { Copiloto } from '@/components/sesion/Copiloto'
+import { Dictado } from '@/components/sesion/Dictado'
 
-export default function SeleccionModo({ params }: { params: Promise<{ id: string, episodioId: string }> }) {
+type Modo = 'completa' | 'seguimiento' | 'rapida'
+
+const MODOS: { key: Modo; icon: 'file' | 'history' | 'zap'; titulo: string; desc: string }[] = [
+  { key: 'completa',    icon: 'file',    titulo: 'Primera valoración', desc: 'Anamnesis completa, antecedentes y exploración inicial.' },
+  { key: 'seguimiento', icon: 'history', titulo: 'Seguimiento',        desc: 'Evolución, reevaluación y ajuste del plan de tratamiento.' },
+  { key: 'rapida',      icon: 'zap',     titulo: 'Sesión rápida',      desc: 'Registro breve de una intervención puntual.' },
+]
+
+const TA = (props: any) => <textarea {...props} rows={props.rows ?? 3} className="form-textarea" />
+
+export default function NuevaSesion({ params }: { params: Promise<{ id: string; episodioId: string }> }) {
   const { id, episodioId } = use(params)
   const router = useRouter()
-  const [esPrimera, setEsPrimera] = useState<boolean | null>(null)
+
   const [paciente, setPaciente] = useState<any>(null)
+  const [episodio, setEpisodio] = useState<any>(null)
+  const [fisio, setFisio] = useState<any>(null)
+  const [modo, setModo] = useState<Modo>('completa')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [copiloto, setCopiloto] = useState<any>(null)
+  const [analizando, setAnalizando] = useState(false)
+
+  const [f, setF] = useState({
+    anamnesis: '', antecedentes_personales: '', antecedentes_familiares: '',
+    exploracion_fisica: '', tests_ortopedicos: '', hipotesis_principal: '',
+    derivacion_texto: '', dolor_eva: 5,
+  })
+  const set = (k: string, v: any) => setF(prev => ({ ...prev, [k]: v }))
 
   useEffect(() => {
     const cargar = async () => {
-      const { data: pacienteData } = await supabase
-        .from('pacientes')
-        .select('nombre, apellidos')
-        .eq('id', id)
-        .single()
-      setPaciente(pacienteData)
-
-      const { count } = await supabase
-        .from('sesiones')
-        .select('*', { count: 'exact', head: true })
-        .eq('episodio_id', episodioId)
-
-      setEsPrimera(count === 0)
+      const { data: pac } = await supabase.from('pacientes').select('*').eq('id', id).single()
+      setPaciente(pac)
+      const { data: ep } = await supabase.from('episodios').select('titulo, user_id').eq('id', episodioId).single()
+      setEpisodio(ep)
+      if (ep?.user_id) {
+        const { data: pf } = await supabase.from('perfiles').select('nombre, apellidos, color').eq('id', ep.user_id).single()
+        setFisio(pf)
+      }
     }
     cargar()
   }, [id, episodioId])
 
-  if (esPrimera === null) {
-    return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-400 text-sm">Cargando...</p>
-      </main>
-    )
+  // Copiloto en vivo: analiza con debounce cuando hay contenido suficiente.
+  useEffect(() => {
+    if (!paciente || f.anamnesis.trim().length < 12) { setCopiloto(null); return }
+    const t = setTimeout(async () => {
+      setAnalizando(true)
+      try {
+        const resp = await fetch('/api/generar-informe', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            modo: 'copiloto',
+            motivo_consulta: paciente?.motivo_consulta,
+            anamnesis: f.anamnesis,
+            antecedentes: f.antecedentes_personales,
+            exploracion_fisica: f.exploracion_fisica,
+            tests_ortopedicos: f.tests_ortopedicos,
+            dolor_eva: f.dolor_eva,
+          }),
+        })
+        const data = await resp.json()
+        setCopiloto(data.copiloto ?? null)
+      } catch { /* silencioso */ }
+      setAnalizando(false)
+    }, 1200)
+    return () => clearTimeout(t)
+  }, [f.anamnesis, f.antecedentes_personales, f.exploracion_fisica, f.tests_ortopedicos, f.dolor_eva, modo, paciente])
+
+  const showAntecedentes = modo === 'completa'
+  const showExploracion  = modo !== 'rapida'
+  const showTests        = modo === 'completa'
+  const showRazonamiento = modo !== 'rapida'
+
+  const guardar = async (conInforme: boolean) => {
+    setLoading(true); setError('')
+    const { data: { user } } = await supabase.auth.getUser()
+
+    let diagnostico_ia: string | null = null
+    if (conInforme) {
+      try {
+        const apiMode = modo === 'completa' ? 'informe' : 'informe_rapido'
+        const resp = await fetch('/api/generar-informe', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            modo: apiMode,
+            motivo_consulta: paciente?.motivo_consulta,
+            anamnesis: f.anamnesis,
+            antecedentes: f.antecedentes_personales,
+            exploracion_fisica: f.exploracion_fisica,
+            tests_ortopedicos: f.tests_ortopedicos,
+            dolor_eva: f.dolor_eva,
+          }),
+        })
+        const data = await resp.json()
+        diagnostico_ia = data.informe ?? null
+      } catch {
+        setError('No se pudo generar el informe IA. La sesión no se ha guardado.')
+        setLoading(false); return
+      }
+    }
+
+    const { error: errIns } = await supabase.from('sesiones').insert([{
+      paciente_id: id, episodio_id: episodioId, user_id: user?.id, clinica_id: paciente?.clinica_id,
+      fecha: new Date().toISOString().split('T')[0],
+      tipo: modo,
+      anamnesis: f.anamnesis || null,
+      antecedentes_personales: showAntecedentes ? (f.antecedentes_personales || null) : null,
+      antecedentes_familiares: showAntecedentes ? (f.antecedentes_familiares || null) : null,
+      exploracion_fisica: showExploracion ? (f.exploracion_fisica || null) : null,
+      tests_ortopedicos: showTests ? (f.tests_ortopedicos || null) : null,
+      hipotesis_principal: showRazonamiento ? (f.hipotesis_principal || null) : null,
+      derivacion: showRazonamiento ? !!f.derivacion_texto.trim() : false,
+      notas: f.derivacion_texto ? `Derivación sugerida: ${f.derivacion_texto}` : null,
+      dolor_eva: f.dolor_eva,
+      diagnostico_ia,
+    }])
+
+    if (errIns) { setError('Error al guardar la sesión.'); setLoading(false); return }
+
+    // Descontar bono activo (si lo hay y queda saldo)
+    const { data: bono } = await supabase
+      .from('bonos').select('id, sesiones_usadas, total_sesiones')
+      .eq('paciente_id', id).eq('activo', true)
+      .order('fecha_compra', { ascending: true }).limit(1).maybeSingle()
+    if (bono && bono.sesiones_usadas < bono.total_sesiones) {
+      await supabase.from('bonos').update({ sesiones_usadas: bono.sesiones_usadas + 1 }).eq('id', bono.id)
+    }
+
+    router.push(`/pacientes/${id}`)
   }
 
+  const rellenarDesdeIA = (e: any) => {
+    setF(prev => ({
+      ...prev,
+      anamnesis: e.anamnesis || prev.anamnesis,
+      antecedentes_personales: e.antecedentes_personales || prev.antecedentes_personales,
+      antecedentes_familiares: e.antecedentes_familiares || prev.antecedentes_familiares,
+      exploracion_fisica: e.exploracion_fisica || prev.exploracion_fisica,
+      tests_ortopedicos: e.tests_ortopedicos || prev.tests_ortopedicos,
+      hipotesis_principal: e.hipotesis_principal || prev.hipotesis_principal,
+      dolor_eva: (e.dolor_eva ?? null) != null ? Number(e.dolor_eva) : prev.dolor_eva,
+    }))
+  }
+
+  const irACampo = (campo: string) => {
+    const el = document.getElementById(`campo-${campo}`)
+    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); (el as HTMLElement).focus() }
+  }
+
+  const anamLabel = modo === 'rapida' ? 'Motivo e intervención' : 'Motivo de consulta y estado actual'
+  const anamPh = modo === 'rapida'
+    ? 'Describe brevemente el motivo y la intervención realizada…'
+    : 'Describe el motivo de consulta, evolución desde la última sesión, síntomas actuales…'
+
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-      <div className="max-w-2xl w-full">
+    <AppShell>
+      <div className="page-wrap-xl">
+        <button onClick={() => router.push(`/pacientes/${id}`)} className="back-link">
+          ← {paciente ? `${paciente.nombre} ${paciente.apellidos}` : 'Volver'}
+        </button>
 
-        <div className="mb-2 text-center">
-          <p className="text-sm text-gray-400">
-            {paciente ? `${paciente.nombre} ${paciente.apellidos}` : ''}
-          </p>
+        <h1 style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic', fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-.01em' }}>
+          Nueva sesión
+        </h1>
+        <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6, marginBottom: 24 }}>
+          {paciente && <strong style={{ color: 'var(--ink)', fontWeight: 600 }}>{paciente.nombre} {paciente.apellidos}</strong>}
+          {episodio?.titulo && <> · {episodio.titulo}</>}
+          {fisio && <> · <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: fisio.color, display: 'inline-block' }} />
+            {fisio.nombre} {fisio.apellidos}</span></>}
+        </p>
+
+        <div className="sesion-layout">
+        <div>
+        {/* Tarjetas de modo */}
+        <div className="modo-card-grid">
+          {MODOS.map(m => (
+            <button key={m.key} type="button" onClick={() => setModo(m.key)} className={`modo-card${modo === m.key ? ' active' : ''}`}>
+              <span className="modo-card-ico"><DI name={m.icon} size={17} strokeWidth={1.8} /></span>
+              <span className="modo-card-t">{m.titulo}</span>
+              <span className="modo-card-d">{m.desc}</span>
+            </button>
+          ))}
         </div>
 
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-gray-900">
-            {esPrimera ? '¿Cómo quieres registrar esta primera sesión?' : '¿Qué tipo de valoración necesitas?'}
-          </h1>
-          <p className="text-gray-500 mt-2 text-sm">
-            {esPrimera
-              ? 'Elige según la complejidad del caso'
-              : 'Elige según la situación clínica actual'}
-          </p>
-        </div>
+        <Dictado onRellenar={rellenarDesdeIA} />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Anamnesis / Motivo */}
+        <div className="form-section-h">{modo === 'rapida' ? 'Motivo de la consulta' : 'Anamnesis'}</div>
+        <label className="form-label">{anamLabel}</label>
+        <TA id="campo-anamnesis" name="anamnesis" value={f.anamnesis} onChange={(e: any) => set('anamnesis', e.target.value)} rows={modo === 'rapida' ? 4 : 3} placeholder={anamPh} />
 
-          <button
-            onClick={() => router.push(`/pacientes/${id}/episodio/${episodioId}/sesion/completa`)}
-            className="bg-white border border-gray-200 rounded-xl p-6 text-left hover:border-blue-400 hover:shadow-sm transition-all group"
-          >
-            <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center mb-4 group-hover:bg-blue-100 transition-colors">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 11l3 3L22 4"/>
-                <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
-              </svg>
-            </div>
-            <h2 className="text-base font-semibold text-gray-900 mb-1">Valoración completa</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              {esPrimera
-                ? 'Para casos complejos o cuando necesitas un razonamiento clínico exhaustivo'
-                : 'Para reevaluar el caso en profundidad o cuando hay cambios significativos'}
-            </p>
-            <ul className="space-y-1">
-              <li className="text-xs text-gray-400 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>
-                Anamnesis estructurada completa
-              </li>
-              <li className="text-xs text-gray-400 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>
-                Análisis de tejidos y mecanismo lesional
-              </li>
-              <li className="text-xs text-gray-400 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>
-                Banderas rojas, amarillas y azules
-              </li>
-              <li className="text-xs text-gray-400 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>
-                Informe clínico completo con plan por fases
-              </li>
-            </ul>
-          </button>
+        {showAntecedentes && (
+          <>
+            <div className="form-section-h">Antecedentes</div>
+            <label className="form-label">Antecedentes personales</label>
+            <TA id="campo-antecedentes" value={f.antecedentes_personales} onChange={(e: any) => set('antecedentes_personales', e.target.value)} placeholder="Patologías previas, cirugías, medicación, hábitos…" />
+            <div style={{ height: 14 }} />
+            <label className="form-label">Antecedentes familiares · opcional</label>
+            <TA id="campo-antecedentes_familiares" value={f.antecedentes_familiares} onChange={(e: any) => set('antecedentes_familiares', e.target.value)} rows={2} placeholder="Antecedentes familiares relevantes…" />
+          </>
+        )}
 
-          <button
-            onClick={() => router.push(
-              esPrimera
-                ? `/pacientes/${id}/episodio/${episodioId}/sesion/rapida`
-                : `/pacientes/${id}/episodio/${episodioId}/sesion/seguimiento`
+        {showExploracion && (
+          <>
+            <div className="form-section-h">Exploración física</div>
+            <label className="form-label">Hallazgos de la exploración</label>
+            <TA id="campo-exploracion_fisica" value={f.exploracion_fisica} onChange={(e: any) => set('exploracion_fisica', e.target.value)} placeholder="Inspección, palpación, rango de movilidad, fuerza, postura…" />
+            {showTests && (
+              <>
+                <div style={{ height: 14 }} />
+                <label className="form-label">Tests y pruebas específicas · opcional</label>
+                <TA id="campo-tests_ortopedicos" value={f.tests_ortopedicos} onChange={(e: any) => set('tests_ortopedicos', e.target.value)} rows={2} placeholder="Tests ortopédicos, escalas funcionales, mediciones…" />
+              </>
             )}
-            className="bg-white border border-gray-200 rounded-xl p-6 text-left hover:border-teal-400 hover:shadow-sm transition-all group"
-          >
-            <div className="w-10 h-10 bg-teal-50 rounded-lg flex items-center justify-center mb-4 group-hover:bg-teal-100 transition-colors">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0f766e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
-                <polyline points="17 6 23 6 23 12"/>
-              </svg>
-            </div>
-            <h2 className="text-base font-semibold text-gray-900 mb-1">Valoración rápida</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              {esPrimera
-                ? 'Para casos sencillos o patologías conocidas donde no necesitas un registro exhaustivo'
-                : 'Para revisiones y seguimiento cuando el caso ya está valorado'}
-            </p>
-            <ul className="space-y-1">
-              {esPrimera ? (
-                <>
-                  <li className="text-xs text-gray-400 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400 flex-shrink-0"></span>
-                    Formulario reducido y ágil
-                  </li>
-                  <li className="text-xs text-gray-400 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400 flex-shrink-0"></span>
-                    Motivo, síntomas y exploración básica
-                  </li>
-                  <li className="text-xs text-gray-400 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400 flex-shrink-0"></span>
-                    Copiloto clínico activo
-                  </li>
-                  <li className="text-xs text-gray-400 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400 flex-shrink-0"></span>
-                    Informe clínico conciso
-                  </li>
-                </>
-              ) : (
-                <>
-                  <li className="text-xs text-gray-400 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400 flex-shrink-0"></span>
-                    Datos precargados de la sesión anterior
-                  </li>
-                  <li className="text-xs text-gray-400 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400 flex-shrink-0"></span>
-                    Solo actualiza la evolución
-                  </li>
-                  <li className="text-xs text-gray-400 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400 flex-shrink-0"></span>
-                    Comparativa automática con sesión anterior
-                  </li>
-                  <li className="text-xs text-gray-400 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400 flex-shrink-0"></span>
-                    Informe de evolución conciso
-                  </li>
-                </>
-              )}
-            </ul>
-          </button>
+          </>
+        )}
 
+        {/* EVA */}
+        <div className="form-section-h">Valoración del dolor</div>
+        <div className="eva-card">
+          <EvaSlider value={f.dolor_eva} onChange={v => set('dolor_eva', v)} />
         </div>
 
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => router.back()}
-            className="text-sm text-gray-400 hover:text-gray-600"
-          >
-            ← Volver
+        {showRazonamiento && (
+          <>
+            <div className="form-section-h">Razonamiento clínico <span className="hint">se completa con el informe IA</span></div>
+            <label className="form-label">Hipótesis principal</label>
+            <input className="form-input" value={f.hipotesis_principal} onChange={e => set('hipotesis_principal', e.target.value)} placeholder="Diagnóstico fisioterápico de presunción…" />
+            <div style={{ height: 14 }} />
+            <label className="form-label">¿Requiere derivación? · opcional</label>
+            <input className="form-input" value={f.derivacion_texto} onChange={e => set('derivacion_texto', e.target.value)} placeholder="Especialista o prueba complementaria si procede…" />
+          </>
+        )}
+
+        {error && <div className="alert-err" style={{ marginTop: 20 }}>{error}</div>}
+
+        <div className="sesion-actions">
+          <button className="btn-ghost" onClick={() => router.push(`/pacientes/${id}`)} disabled={loading}>Cancelar</button>
+          <button className="btn-line" onClick={() => guardar(false)} disabled={loading}>
+            <DI name="check" size={15} strokeWidth={2} /> Guardar borrador
+          </button>
+          <button className="btn-ink" onClick={() => guardar(true)} disabled={loading}>
+            <DI name="sparkles" size={15} strokeWidth={1.8} /> {loading ? 'Procesando…' : 'Guardar y generar informe'}
           </button>
         </div>
+        </div>
 
+        <Copiloto data={copiloto} analizando={analizando} onPregunta={irACampo} />
+        </div>
       </div>
-    </main>
+    </AppShell>
   )
 }

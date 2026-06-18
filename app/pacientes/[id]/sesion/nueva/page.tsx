@@ -3,6 +3,7 @@
 import { useState, use, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/app/lib/supabase'
+import { AppShell } from '@/components/layout/AppShell'
 
 interface CopiloResponse {
   hipotesis_principal: string
@@ -164,7 +165,8 @@ export default function NuevaSesion({ params }: { params: Promise<{ id: string }
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 p-6">
+    <AppShell>
+      <div className="page-wrap-xl">
       <div className="max-w-7xl mx-auto">
 
         <div className="mb-4">
@@ -499,6 +501,7 @@ export default function NuevaSesion({ params }: { params: Promise<{ id: string }
           </div>
         </div>
       </div>
-    </main>
+      </div>
+    </AppShell>
   )
 }

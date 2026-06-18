@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/app/lib/supabase'
+import { AppShell } from '@/components/layout/AppShell'
 
 export default function EditarPaciente({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -73,28 +74,21 @@ export default function EditarPaciente({ params }: { params: Promise<{ id: strin
 
   if (loadingData) {
     return (
-      <main className="min-h-screen bg-gray-50 p-8">
-        <p className="text-gray-500 text-center">Cargando...</p>
-      </main>
+      <AppShell>
+        <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Cargando…</div>
+      </AppShell>
     )
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-2xl mx-auto">
+    <AppShell>
+      <div className="page-wrap-sm">
+        <button onClick={() => router.push(`/pacientes/${id}`)} className="back-link">← Volver a la ficha</button>
 
-        <div className="mb-6">
-          <button
-            onClick={() => router.push(`/pacientes/${id}`)}
-            className="text-sm text-blue-500 hover:underline"
-          >
-            ← Volver a la ficha
-          </button>
-        </div>
-
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">RuDaMi Project</h1>
-          <p className="text-gray-500 mt-1">Editar paciente</p>
+        <div className="page-head">
+          <div>
+            <h1 className="page-title">Editar paciente</h1>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
@@ -228,6 +222,6 @@ export default function EditarPaciente({ params }: { params: Promise<{ id: strin
 
         </form>
       </div>
-    </main>
+    </AppShell>
   )
 }

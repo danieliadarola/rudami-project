@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/app/lib/supabase'
+import { AppShell } from '@/components/layout/AppShell'
 
 export default function NuevoPaciente() {
   const router = useRouter()
@@ -91,32 +92,15 @@ export default function NuevoPaciente() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f0f2f5', fontFamily: '-apple-system, BlinkMacSystemFont, SF Pro Display, sans-serif' }}>
+    <AppShell>
+      <div className="page-wrap-sm">
+        <button onClick={() => router.push(esAdmin ? '/admin' : '/dashboard')} className="back-link">← Volver</button>
 
-      <nav style={{ background: '#0f172a', padding: '0 28px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '32px', height: '32px', background: '#3b82f6', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: 'white', fontSize: '15px', fontWeight: '700' }}>R</span>
+        <div className="page-head">
+          <div>
+            <h1 className="page-title">Nuevo paciente</h1>
+            <p className="page-sub">{esAdmin ? 'Como admin puedes asignar el paciente a cualquier fisio' : 'El paciente se asignará a tu cuenta'}</p>
           </div>
-          <span style={{ color: 'white', fontSize: '16px', fontWeight: '600', letterSpacing: '-0.4px' }}>RuDaMi Project</span>
-        </div>
-        <button
-          onClick={() => router.push(esAdmin ? '/admin' : '/dashboard')}
-          style={{ background: 'transparent', border: '1.5px solid rgba(255,255,255,0.4)', color: 'rgba(255,255,255,0.9)', padding: '7px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}
-        >
-          ← Volver
-        </button>
-      </nav>
-
-      <div style={{ padding: '32px 28px', maxWidth: '600px', margin: '0 auto' }}>
-
-        <div style={{ marginBottom: '28px' }}>
-          <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', letterSpacing: '-0.8px' }}>
-            Nuevo paciente
-          </h1>
-          <p style={{ fontSize: '13px', color: '#64748b', marginTop: '3px' }}>
-            {esAdmin ? 'Como admin puedes asignar el paciente a cualquier fisio' : 'El paciente se asignará a tu cuenta'}
-          </p>
         </div>
 
         <form onSubmit={handleSubmit} style={{ background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '28px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -280,6 +264,6 @@ export default function NuevoPaciente() {
 
         </form>
       </div>
-    </div>
+    </AppShell>
   )
 }

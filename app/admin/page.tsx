@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/app/lib/supabase-server'
 import { redirect } from 'next/navigation'
+import { AppShell } from '@/components/layout/AppShell'
 
 export const revalidate = 0
 
@@ -49,119 +50,69 @@ export default async function AdminPanel() {
   const mesActual = hoy.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
 
   return (
-    <div style={{ background: '#f0f2f5', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, SF Pro Display, sans-serif' }}>
+    <AppShell>
+      <div className="page-wrap">
 
-      <nav style={{ background: '#0f172a', padding: '0 28px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '32px', height: '32px', background: '#3b82f6', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: 'white', fontSize: '15px', fontWeight: '700' }}>R</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ color: 'white', fontSize: '16px', fontWeight: '600', letterSpacing: '-0.4px' }}>
-              {perfil?.clinicas?.nombre || 'RuDaMi Project'}
-            </span>
-            <span style={{ background: '#3b82f6', color: 'white', fontSize: '10px', fontWeight: '600', padding: '2px 7px', borderRadius: '20px' }}>
-              Admin
-            </span>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Link
-            href="/dashboard"
-            style={{ background: 'transparent', border: '1.5px solid rgba(255,255,255,0.4)', color: 'rgba(255,255,255,0.9)', padding: '7px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: '500', textDecoration: 'none' }}
-          >
-            Mi panel
-          </Link>
-          <Link
-            href="/citas"
-            style={{ background: 'transparent', border: '1.5px solid rgba(255,255,255,0.4)', color: 'rgba(255,255,255,0.9)', padding: '7px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: '500', textDecoration: 'none' }}
-          >
-            📅 Citas
-          </Link>
-          <form action="/api/logout" method="POST">
-            <button
-              type="submit"
-              style={{ background: 'transparent', border: '1.5px solid rgba(255,255,255,0.4)', color: 'rgba(255,255,255,0.9)', padding: '7px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}
-            >
-              Cerrar sesión
-            </button>
-          </form>
-        </div>
-      </nav>
-
-      <div style={{ padding: '32px 28px', maxWidth: '1100px', margin: '0 auto' }}>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '28px' }}>
+        <div className="page-head">
           <div>
-            <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', letterSpacing: '-0.8px' }}>
-              Panel de administración
-            </h1>
-            <p style={{ fontSize: '13px', color: '#64748b', marginTop: '3px' }}>
-              {perfil?.clinicas?.nombre} · Vista completa de la clínica
-            </p>
+            <h1 className="page-title">Panel de administración</h1>
+            <p className="page-sub">{perfil?.clinicas?.nombre} · Vista completa de la clínica</p>
           </div>
-          <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '9px', padding: '8px 14px', fontSize: '12px', color: '#475569', fontWeight: '500' }}>
+          <div style={{ background: '#fff', border: '1px solid var(--hair)', borderRadius: 9, padding: '8px 14px', fontSize: 12, color: 'var(--ink-2)', fontWeight: 500 }}>
             {mesActual.charAt(0).toUpperCase() + mesActual.slice(1)}
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', marginBottom: '24px' }}>
-          <div style={{ background: 'white', borderRadius: '14px', padding: '20px 22px', border: '1px solid #e2e8f0', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: '#3b82f6' }}></div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Fisioterapeutas</div>
-            <div style={{ fontSize: '32px', fontWeight: '700', color: '#0f172a', marginTop: '6px', letterSpacing: '-1.5px', lineHeight: 1 }}>{fisios?.length ?? 0}</div>
-            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px' }}>En la clínica</div>
+        {/* KPIs */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 24 }}>
+          <div style={{ background: '#fff', borderRadius: 14, padding: '20px 22px', border: '1px solid var(--hair)', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#4f5fe8' }} />
+            <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.08em' }}>Fisioterapeutas</div>
+            <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--ink)', marginTop: 6, letterSpacing: '-1.5px', lineHeight: 1 }}>{fisios?.length ?? 0}</div>
+            <div style={{ fontSize: 12, color: 'var(--faint)', marginTop: 6 }}>En la clínica</div>
           </div>
-          <div style={{ background: 'white', borderRadius: '14px', padding: '20px 22px', border: '1px solid #e2e8f0', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: '#10b981' }}></div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Pacientes totales</div>
-            <div style={{ fontSize: '32px', fontWeight: '700', color: '#0f172a', marginTop: '6px', letterSpacing: '-1.5px', lineHeight: 1 }}>{pacientes?.length ?? 0}</div>
-            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px' }}>En toda la clínica</div>
+          <div style={{ background: '#fff', borderRadius: 14, padding: '20px 22px', border: '1px solid var(--hair)', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#10b981' }} />
+            <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.08em' }}>Pacientes totales</div>
+            <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--ink)', marginTop: 6, letterSpacing: '-1.5px', lineHeight: 1 }}>{pacientes?.length ?? 0}</div>
+            <div style={{ fontSize: 12, color: 'var(--faint)', marginTop: 6 }}>En toda la clínica</div>
           </div>
-          <div style={{ background: 'white', borderRadius: '14px', padding: '20px 22px', border: '1px solid #e2e8f0', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: '#6366f1' }}></div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Sesiones este mes</div>
-            <div style={{ fontSize: '32px', fontWeight: '700', color: '#0f172a', marginTop: '6px', letterSpacing: '-1.5px', lineHeight: 1 }}>{sesionesmes?.length ?? 0}</div>
-            <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '6px', textTransform: 'capitalize' }}>{mesActual}</div>
+          <div style={{ background: '#fff', borderRadius: 14, padding: '20px 22px', border: '1px solid var(--hair)', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#6366f1' }} />
+            <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.08em' }}>Sesiones este mes</div>
+            <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--ink)', marginTop: 6, letterSpacing: '-1.5px', lineHeight: 1 }}>{sesionesmes?.length ?? 0}</div>
+            <div style={{ fontSize: 12, color: 'var(--faint)', marginTop: 6, textTransform: 'capitalize' }}>{mesActual}</div>
           </div>
         </div>
 
-        <div style={{ background: 'white', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '22px', marginBottom: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a' }}>
-              Equipo de fisioterapeutas
-            </h2>
-            <Link
-              href="/admin/nuevo-fisio"
-              style={{ background: '#0f172a', color: 'white', padding: '8px 16px', borderRadius: '9px', fontSize: '13px', fontWeight: '600', textDecoration: 'none' }}
-            >
-              + Añadir fisio
-            </Link>
+        {/* Equipo */}
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid var(--hair)', padding: 22, marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>Equipo de fisioterapeutas</h2>
+            <Link href="/admin/nuevo-fisio" className="btn-ink">+ Añadir fisio</Link>
           </div>
           <div>
             {fisios?.map((fisio, index) => (
-              <div key={fisio.id} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 0', borderBottom: index < (fisios?.length ?? 0) - 1 ? '1px solid #f1f5f9' : 'none' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: fisio.rol === 'admin' ? '#eff6ff' : '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: fisio.rol === 'admin' ? '#2563eb' : '#16a34a', flexShrink: 0, border: `2px solid ${fisio.rol === 'admin' ? '#dbeafe' : '#bbf7d0'}` }}>
+              <div key={fisio.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 0', borderBottom: index < (fisios?.length ?? 0) - 1 ? '1px solid var(--hair-s)' : 'none' }}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: fisio.rol === 'admin' ? '#eef0ff' : '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: fisio.rol === 'admin' ? '#4f5fe8' : '#16a34a', flexShrink: 0 }}>
                   {fisio.nombre?.charAt(0)}{fisio.apellidos?.charAt(0)}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b' }}>
-                    {fisio.nombre} {fisio.apellidos}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{fisio.nombre} {fisio.apellidos}</div>
+                  <div style={{ fontSize: 12, color: 'var(--faint)', marginTop: 2 }}>
                     {fisio.numero_colegiado ? `Nº ${fisio.numero_colegiado}` : 'Sin número de colegiado'}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>{pacientesporFisio(fisio.id)}</div>
-                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>pacientes</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>{pacientesporFisio(fisio.id)}</div>
+                    <div style={{ fontSize: 11, color: 'var(--faint)' }}>pacientes</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>{sesionesporFisio(fisio.id)}</div>
-                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>sesiones mes</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>{sesionesporFisio(fisio.id)}</div>
+                    <div style={{ fontSize: 11, color: 'var(--faint)' }}>sesiones mes</div>
                   </div>
-                  <span style={{ background: fisio.rol === 'admin' ? '#eff6ff' : '#f0fdf4', color: fisio.rol === 'admin' ? '#2563eb' : '#16a34a', fontSize: '11px', fontWeight: '600', padding: '3px 9px', borderRadius: '20px' }}>
+                  <span style={{ background: fisio.rol === 'admin' ? '#eef0ff' : '#f0fdf4', color: fisio.rol === 'admin' ? '#4f5fe8' : '#16a34a', fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20 }}>
                     {fisio.rol === 'admin' ? 'Admin' : 'Fisio'}
                   </span>
                 </div>
@@ -170,42 +121,34 @@ export default async function AdminPanel() {
           </div>
         </div>
 
-        <div style={{ background: 'white', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '22px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a' }}>
+        {/* Pacientes */}
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid var(--hair)', padding: 22 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>
               Todos los pacientes
-              <span style={{ fontSize: '13px', fontWeight: '400', color: '#94a3b8', marginLeft: '8px' }}>({pacientes?.length ?? 0})</span>
+              <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--muted)', marginLeft: 8 }}>({pacientes?.length ?? 0})</span>
             </h2>
-            <Link
-              href="/pacientes/nuevo"
-              style={{ background: '#0f172a', color: 'white', padding: '8px 16px', borderRadius: '9px', fontSize: '13px', fontWeight: '600', textDecoration: 'none' }}
-            >
-              + Nuevo paciente
-            </Link>
+            <Link href="/pacientes/nuevo" className="btn-ink">+ Nuevo paciente</Link>
           </div>
           <div>
             {pacientes?.map((paciente, index) => (
-              <div key={paciente.id} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '13px 0', borderBottom: index < (pacientes?.length ?? 0) - 1 ? '1px solid #f8fafc' : 'none' }}>
-                <Link href={`/pacientes/${paciente.id}`} style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, textDecoration: 'none' }}>
-                  <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: '#2563eb', flexShrink: 0, border: '2px solid #dbeafe' }}>
+              <div key={paciente.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '13px 0', borderBottom: index < (pacientes?.length ?? 0) - 1 ? '1px solid var(--hair-s)' : 'none' }}>
+                <Link href={`/pacientes/${paciente.id}`} style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, textDecoration: 'none' }}>
+                  <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#eef0ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#4f5fe8', flexShrink: 0 }}>
                     {paciente.nombre?.charAt(0)}{paciente.apellidos?.charAt(0)}
                   </div>
                   <div>
-                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b' }}>
-                      {paciente.nombre} {paciente.apellidos}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
-                      {paciente.motivo_consulta}
-                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{paciente.nombre} {paciente.apellidos}</div>
+                    <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{paciente.motivo_consulta}</div>
                   </div>
                 </Link>
                 <div style={{ textAlign: 'right' }}>
                   {paciente.perfiles && (
-                    <span style={{ fontSize: '11px', background: '#f0fdf4', color: '#16a34a', padding: '3px 9px', borderRadius: '20px', fontWeight: '500' }}>
+                    <span style={{ fontSize: 11, background: '#f0fdf4', color: '#16a34a', padding: '3px 9px', borderRadius: 20, fontWeight: 500 }}>
                       {paciente.perfiles.nombre} {paciente.perfiles.apellidos}
                     </span>
                   )}
-                  <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>{paciente.telefono}</div>
+                  <div style={{ fontSize: 12, color: 'var(--faint)', marginTop: 4 }}>{paciente.telefono}</div>
                 </div>
               </div>
             ))}
@@ -213,6 +156,6 @@ export default async function AdminPanel() {
         </div>
 
       </div>
-    </div>
+    </AppShell>
   )
 }

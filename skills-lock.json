@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "fhir-developer-skill": {
+      "source": "anthropics/healthcare",
+      "sourceType": "github",
+      "skillPath": "fhir-developer-skill/SKILL.md",
+      "computedHash": "6b53a78ec6be62023708e970d75fe0f5ca44aa13304d80c11445f1228c4390a2"
+    }
+  }
+}

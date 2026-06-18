@@ -7,6 +7,9 @@ import BotonEliminarSesion from './BotonEliminarSesion'
 interface Props {
   sesion: any
   paciente: any
+  fisios?: any[]
+  defaultOpen?: boolean
+  embedded?: boolean
 }
 
 function extraerSeccion(texto: string, seccion: string): string {
@@ -21,8 +24,9 @@ function extraerSeccion(texto: string, seccion: string): string {
   return resto.trim()
 }
 
-export default function SesionCard({ sesion, paciente }: Props) {
-  const [abierta, setAbierta] = useState(false)
+export default function SesionCard({ sesion, paciente, fisios = [], defaultOpen = false, embedded = false }: Props) {
+  const [abierta, setAbierta] = useState(defaultOpen)
+  const open = embedded || abierta
 
   const fechaFormateada = new Date(sesion.fecha + 'T12:00:00').toLocaleDateString('es-ES', {
     weekday: 'short',
@@ -45,9 +49,18 @@ export default function SesionCard({ sesion, paciente }: Props) {
   const educacion = extraerSeccion(informe, '**EDUCACIÓN AL PACIENTE**')
   const pronostico = extraerSeccion(informe, '**PRONÓSTICO**')
 
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+  // ── Seguridad clínica ──
+  const esSignificativo = (t: string, neg: RegExp) => !!t && !neg.test(t.trim())
+  const redFlagsAlerta = esSignificativo(redFlags, /no se identifican|no hay|ninguna|sin red flags/i)
+  const derivacionAlerta =
+    sesion.derivacion === true ||
+    esSignificativo(derivacion, /no se indica|no procede|no indicada|^no\b/i)
+  const fisio = fisios.find((f: any) => f.id === sesion.user_id)
 
+  return (
+    <div className={embedded ? "" : "bg-white rounded-xl border border-gray-200 overflow-hidden"}>
+
+      {!embedded && (
       <div
         className="p-5 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer"
         onClick={() => setAbierta(!abierta)}
@@ -82,15 +95,16 @@ export default function SesionCard({ sesion, paciente }: Props) {
           </span>
         </div>
       </div>
+      )}
 
-      {abierta && (
+      {open && (
         <div>
           <div className="px-5 pb-5 border-t border-gray-100">
 
             <div className="flex justify-between items-center mt-4 mb-4">
               <BotonEliminarSesion id={sesion.id} />
               {sesion.diagnostico_ia && (
-                <BotonPDF paciente={paciente} sesion={sesion} />
+                <BotonPDF paciente={paciente} sesion={sesion} fisio={fisio} />
               )}
             </div>
 
@@ -162,6 +176,28 @@ export default function SesionCard({ sesion, paciente }: Props) {
                 <span className="text-blue-600">🤖</span>
                 <p className="text-sm font-semibold text-blue-800">Informe generado por IA</p>
               </div>
+
+              {(redFlagsAlerta || derivacionAlerta) && (
+                <div style={{
+                  background: '#fef2f2', border: '1px solid #fecaca',
+                  borderLeft: '4px solid #dc2626', borderRadius: 10,
+                  padding: '12px 14px', marginBottom: 16,
+                }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: '#b91c1c', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 5 }}>
+                    ⚠ Requiere valoración / derivación médica
+                  </p>
+                  {redFlagsAlerta && (
+                    <p style={{ fontSize: 13, color: '#7f1d1d', marginBottom: derivacionAlerta ? 4 : 0 }}>
+                      <strong>Red flags:</strong> {redFlags}
+                    </p>
+                  )}
+                  {derivacionAlerta && (
+                    <p style={{ fontSize: 13, color: '#7f1d1d' }}>
+                      <strong>Derivación:</strong> {derivacion || 'Indicada'}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
 
@@ -243,6 +279,15 @@ export default function SesionCard({ sesion, paciente }: Props) {
                   <p className="text-sm text-gray-700">{pronostico}</p>
                 </div>
               )}
+
+              <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid #dbeafe' }}>
+                <p style={{ fontSize: 11, color: '#64748b', lineHeight: 1.5 }}>
+                  ⚕️ Informe de <strong>soporte a la decisión clínica</strong> generado con IA. No constituye diagnóstico médico ni sustituye el juicio del fisioterapeuta colegiado responsable.
+                  {fisio && (fisio.nombre || fisio.numero_colegiado) && (
+                    <> {' '}Responsable: {fisio.nombre} {fisio.apellidos}{fisio.numero_colegiado ? ` · Nº colegiado ${fisio.numero_colegiado}` : ''}.</>
+                  )}
+                </p>
+              </div>
 
             </div>
           )}
