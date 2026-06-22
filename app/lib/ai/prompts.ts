@@ -201,3 +201,38 @@ Responde ÚNICAMENTE en JSON válido, sin texto adicional ni backticks:
   "resumen": "conclusión breve de la sesión"
 }`
 }
+
+
+export function promptInformePaciente(d: DatosClinicos): string {
+  return `Eres un fisioterapeuta que escribe un informe PARA EL PACIENTE (no para otro profesional). Lenguaje cálido, claro y sencillo, sin tecnicismos, comprensible por cualquier edad. Tutea al paciente.
+
+DATOS DE LA SESIÓN:
+- Motivo / zona: ${v(d.motivo_consulta)}
+- Hipótesis del fisio: ${v(d.hipotesis_principal)}
+- Anamnesis: ${v(d.anamnesis)}
+- Exploración: ${v(d.exploracion_fisica)}
+- Dolor EVA: ${v(d.dolor_eva)}/10
+
+Genera el contenido del informe. Reglas:
+- "resumen": 1-2 frases de "lo importante de hoy" (qué se trabajó).
+- "explicacion": explica de forma humana qué le ocurre, posibles causas y síntomas habituales, en 3-4 frases. Sin alarmar.
+- "sintomas": lista corta de síntomas habituales de su caso.
+- "que_esperar": exactamente 4 fases de evolución con titulo corto y descripción breve y motivadora.
+- "recomendaciones": 4-6 consejos para entre sesiones, cada uno con un emoji adecuado en "icono".
+- "motivacion": 1 frase final positiva y de ánimo.
+
+Responde ÚNICAMENTE en JSON válido, sin texto adicional ni backticks:
+{
+  "resumen": "",
+  "explicacion": "",
+  "sintomas": ["", ""],
+  "que_esperar": [
+    {"fase": 1, "titulo": "Reducción del dolor", "descripcion": ""},
+    {"fase": 2, "titulo": "Mejora de movilidad", "descripcion": ""},
+    {"fase": 3, "titulo": "Recuperación funcional", "descripcion": ""},
+    {"fase": 4, "titulo": "Prevención y fortalecimiento", "descripcion": ""}
+  ],
+  "recomendaciones": [{"icono": "💧", "texto": ""}],
+  "motivacion": ""
+}`
+}

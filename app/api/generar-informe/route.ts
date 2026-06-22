@@ -32,6 +32,7 @@ export async function POST(request: Request) {
       nivel_actividad: body.nivel_actividad,
       historial_deportivo: body.historial_deportivo,
       transcripcion: body.transcripcion,
+      hipotesis_principal: body.hipotesis_principal,
     }
 
     const resultado = await generarInforme(modo, datos)

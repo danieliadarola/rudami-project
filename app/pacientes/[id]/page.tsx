@@ -87,6 +87,7 @@ export default async function FichaPaciente({ params }: { params: Promise<{ id: 
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <Link href={`/informes/nuevo?paciente=${id}`} className="btn-line">✦ Informe</Link>
             <Link href={`/citas/nueva?paciente=${id}`} className="btn-line"><DI name="calendar" size={15} strokeWidth={1.8} /> Nueva cita</Link>
             <Link href={`/pacientes/${id}/episodio/nuevo`} className="btn-ink"><DI name="plus" size={15} strokeWidth={2.2} /> Nueva consulta</Link>
           </div>
