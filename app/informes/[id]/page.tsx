@@ -3,6 +3,7 @@
 import { useState, use, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/app/lib/supabase'
+import Link from 'next/link'
 import { AppShell } from '@/components/layout/AppShell'
 
 const METRICAS: { k: string; l: string }[] = [
@@ -173,7 +174,10 @@ export default function EditorInforme({ params }: { params: Promise<{ id: string
 
         {/* Ejercicios */}
         <div className="form-card">
-          <div className="form-card-title">Ejercicios personalizados</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <div className="form-card-title">Ejercicios personalizados</div>
+            <Link href="/configuracion/ejercicios" style={{ fontSize: 12, color: 'var(--accent)', textDecoration: 'none' }}>Gestionar biblioteca</Link>
+          </div>
           {ejs.map((e, i) => (
             <div key={i} style={{ border: '1px solid var(--hair)', borderRadius: 12, padding: 12, marginBottom: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
