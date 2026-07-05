@@ -1,7 +1,7 @@
 // app/lib/ai/types.ts
 // Contratos de la capa de razonamiento clínico (independiente del proveedor)
 
-export type ModoIA = 'copiloto' | 'informe' | 'informe_rapido' | 'transcripcion' | 'informe_paciente'
+export type ModoIA = 'copiloto' | 'informe' | 'informe_rapido' | 'transcripcion' | 'informe_paciente' | 'faq_paciente' | 'guia_chat'
 
 /** Datos clínicos que alimentan el motor. Todos opcionales: el formulario
  *  puede estar parcialmente relleno (modo copiloto en tiempo real). */
@@ -26,6 +26,12 @@ export interface DatosClinicos {
   historial_deportivo?: string
   transcripcion?: string
   hipotesis_principal?: string
+  /** Guía del paciente: contexto del plan publicado (JSON serializado) */
+  contexto_guia?: string
+  /** Guía del paciente: pregunta escrita por el paciente en el chat */
+  pregunta_paciente?: string
+  /** Guía del paciente: últimos turnos del chat para dar continuidad */
+  historial_chat?: string
 }
 
 /** Respuesta estructurada del copiloto clínico en tiempo real. */
@@ -75,11 +81,20 @@ export interface InformePacienteOutput {
   motivacion?: string
 }
 
+/** FAQ pregenerada al publicar la guía: dudas generales + una explicación
+ *  llana por ejercicio. Se guarda en informes.faq y se sirve sin coste. */
+export interface FaqPacienteOutput {
+  generales?: { pregunta: string; respuesta: string }[]
+  ejercicios?: { nombre: string; como_hacerlo: string; sensacion_normal: string }[]
+}
+
 export type ResultadoIA =
   | { copiloto: CopilotoOutput | null; error?: string }
   | { informe: string }
   | { extraccion: ExtraccionOutput | null; error?: string }
   | { informe_paciente: InformePacienteOutput | null; error?: string }
+  | { faq_paciente: FaqPacienteOutput | null; error?: string }
+  | { respuesta_guia: string | null; error?: string }
 
 /** Parámetros de una llamada de razonamiento de bajo nivel. */
 export interface RazonarParams {

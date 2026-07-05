@@ -3,7 +3,7 @@
 // generarInforme(); no conoce el proveedor ni los prompts.
 
 import type { AIProvider, DatosClinicos, ModoIA, ResultadoIA } from './types'
-import { promptCopiloto, promptInformeRapido, promptInformeCompleto, promptTranscripcion, promptInformePaciente } from './prompts'
+import { promptCopiloto, promptInformeRapido, promptInformeCompleto, promptTranscripcion, promptInformePaciente, promptFaqPaciente, promptGuiaChat } from './prompts'
 import { groqProvider } from './groq'
 
 /** Selección del proveedor activo. Único punto a tocar para cambiar de modelo
@@ -53,6 +53,26 @@ export async function generarInforme(
     }
   }
 
+  if (modo === 'faq_paciente') {
+    const respuesta = await provider.razonar({ prompt: promptFaqPaciente(datos), maxTokens: 1800, temperature: 0.4 })
+    try {
+      const clean = respuesta.replace(/```json|```/g, '').trim()
+      return { faq_paciente: JSON.parse(clean) }
+    } catch {
+      return { faq_paciente: null, error: 'Error parseando la FAQ del paciente' }
+    }
+  }
+
+  if (modo === 'guia_chat') {
+    try {
+      const respuesta = await provider.razonar({ prompt: promptGuiaChat(datos), maxTokens: 400, temperature: 0.4 })
+      const texto = respuesta.trim()
+      return texto ? { respuesta_guia: texto } : { respuesta_guia: null, error: 'Respuesta vacía' }
+    } catch {
+      return { respuesta_guia: null, error: 'Error generando la respuesta' }
+    }
+  }
+
   const esRapido = modo === 'informe_rapido'
   const respuesta = await provider.razonar({
     prompt: esRapido ? promptInformeRapido(datos) : promptInformeCompleto(datos),
@@ -62,4 +82,4 @@ export async function generarInforme(
   return { informe: respuesta }
 }
 
-export type { DatosClinicos, ModoIA, ResultadoIA, CopilotoOutput, ExtraccionOutput, InformePacienteOutput } from './types'
+export type { DatosClinicos, ModoIA, ResultadoIA, CopilotoOutput, ExtraccionOutput, InformePacienteOutput, FaqPacienteOutput } from './types'
