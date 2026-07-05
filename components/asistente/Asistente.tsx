@@ -8,6 +8,19 @@ import { DI } from '@/components/ui/DashboardIcons'
 interface Msg { role: 'user' | 'assistant'; content: string }
 const SUGERENCIAS = ['¿Qué citas tengo hoy?', 'Agenda a Elena Castro mañana a las 10', 'Huecos libres del jueves', 'Busca a Hugo']
 
+/** Renderiza **negritas** y saltos de línea del mensaje del asistente. */
+function formatearMensaje(texto: string) {
+  return texto.split('\n').map((linea, li) => (
+    <span key={li} style={{ display: 'block' }}>
+      {linea.split(/(\*\*[^*]+\*\*)/g).map((tramo, ti) =>
+        tramo.startsWith('**') && tramo.endsWith('**')
+          ? <strong key={ti}>{tramo.slice(2, -2)}</strong>
+          : <span key={ti}>{tramo}</span>,
+      )}
+    </span>
+  ))
+}
+
 export function Asistente({ open, onClose }: { open: boolean; onClose: () => void }) {
   const router = useRouter()
   const [messages, setMessages] = useState<Msg[]>([])
@@ -16,6 +29,8 @@ export function Asistente({ open, onClose }: { open: boolean; onClose: () => voi
   const [pendiente, setPendiente] = useState<any>(null)
   const [escuchando, setEscuchando] = useState(false)
   const [vozOn, setVozOn] = useState(false)
+  const [pasos, setPasos] = useState<string[]>([])
+  const [pasosVistos, setPasosVistos] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
   const recRef = useRef<any>(null)
   const typingRef = useRef<any>(null)
@@ -46,20 +61,39 @@ export function Asistente({ open, onClose }: { open: boolean; onClose: () => voi
     }, 30)
   }
 
+  /** Revela la traza de pensamiento paso a paso y, al terminar, ejecuta `done`. */
+  const mostrarPasos = (lista: string[], done: () => void) => {
+    if (!lista.length) { done(); return }
+    setPasos(lista); setPasosVistos(1)
+    let n = 1
+    const iv = setInterval(() => {
+      n++
+      if (n > lista.length) {
+        clearInterval(iv)
+        setTimeout(() => { setPasos([]); setPasosVistos(0); done() }, 200)
+      } else setPasosVistos(n)
+    }, 260)
+  }
+
   const enviar = async (texto?: string) => {
     const t = (texto ?? input).trim()
     if (!t || loading) return
     const nuevos: Msg[] = [...messages, { role: 'user', content: t }]
-    setMessages(nuevos); setInput(''); setLoading(true); setPendiente(null)
+    setMessages(nuevos); setInput(''); setLoading(true); setPendiente(null); setPasos([]); setPasosVistos(0)
     try {
       const r = await fetch('/api/asistente', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: nuevos }) })
       const d = await r.json()
-      escribirGradual(d.mensaje ?? d.error ?? 'Sin respuesta.')
-      if (d.pendiente) setPendiente(d.pendiente)
-      else router.refresh()
-      if (d.mensaje) hablar(d.mensaje)
-    } catch { setMessages(m => [...m, { role: 'assistant', content: 'Error de conexión con el asistente.' }]) }
-    setLoading(false)
+      mostrarPasos(d.pasos ?? [], () => {
+        escribirGradual(d.mensaje ?? d.error ?? 'Sin respuesta.')
+        if (d.pendiente) setPendiente(d.pendiente)
+        else router.refresh()
+        if (d.mensaje) hablar(d.mensaje)
+        setLoading(false)
+      })
+    } catch {
+      setMessages(m => [...m, { role: 'assistant', content: 'Error de conexión con el asistente.' }])
+      setLoading(false)
+    }
   }
 
   const confirmar = async (ok: boolean) => {
@@ -93,11 +127,11 @@ export function Asistente({ open, onClose }: { open: boolean; onClose: () => voi
       <aside className="asist-panel">
         <div className="asist-head">
           <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--ink)', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <span>✦</span> Asistente
+            <DI name="sparkles" size={16} strokeWidth={1.6} style={{ color: 'var(--accent)' }} /> Asistente
           </span>
           <div style={{ display: 'flex', gap: 4 }}>
             <button className="icon-btn ghost" title={vozOn ? 'Silenciar voz' : 'Leer respuestas en voz alta'} onClick={() => setVozOn(v => !v)} style={{ color: vozOn ? 'var(--accent)' : 'var(--ink-2)' }}>
-              {vozOn ? '🔊' : '🔈'}
+              <DI name={vozOn ? 'volume' : 'volumeOff'} size={17} strokeWidth={1.7} />
             </button>
             <button className="icon-btn ghost" onClick={onClose} title="Cerrar"><DI name="x" size={18} strokeWidth={1.8} /></button>
           </div>
@@ -119,7 +153,7 @@ export function Asistente({ open, onClose }: { open: boolean; onClose: () => voi
 
           {messages.map((m, i) => (
             <div key={i} className={`asist-msg ${m.role}`}>
-              {m.content}
+              {formatearMensaje(m.content)}
               {typing && m.role === 'assistant' && i === messages.length - 1 && <span className="asist-caret" />}
             </div>
           ))}
@@ -134,11 +168,27 @@ export function Asistente({ open, onClose }: { open: boolean; onClose: () => voi
             </div>
           )}
 
-          {loading && <div className="asist-msg assistant" style={{ color: 'var(--faint)' }}>escribiendo…</div>}
+          {pasos.length > 0 && (
+            <div className="asist-think" aria-live="polite">
+              {pasos.slice(0, pasosVistos).map((p, i) => {
+                const hecho = i < pasosVistos - 1
+                return (
+                  <div key={i} className={`asist-think-row${hecho ? ' done' : ''}`}>
+                    <span className="asist-think-ico">{hecho ? <DI name="check" size={12} strokeWidth={2.4} /> : <span className="asist-think-dot" />}</span>
+                    <span>{p}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {loading && pasos.length === 0 && !typing && (
+            <div className="asist-think"><div className="asist-think-row"><span className="asist-think-ico"><span className="asist-think-dot" /></span><span>Pensando…</span></div></div>
+          )}
         </div>
 
         <div className="asist-foot">
-          <button className={`asist-mic${escuchando ? ' on' : ''}`} onClick={escuchar} title="Dictar por voz">🎙</button>
+          <button className={`asist-mic${escuchando ? ' on' : ''}`} onClick={escuchar} title="Dictar por voz" aria-label="Dictar por voz"><DI name="mic" size={17} strokeWidth={1.7} /></button>
           <input
             className="asist-input"
             placeholder={escuchando ? 'Escuchando…' : 'Escribe o dicta…'}
@@ -146,7 +196,7 @@ export function Asistente({ open, onClose }: { open: boolean; onClose: () => voi
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') enviar() }}
           />
-          <button className="btn-ink" style={{ height: 36, padding: '0 14px' }} onClick={() => enviar()} disabled={loading || !input.trim()}>Enviar</button>
+          <button className="btn-ink" style={{ height: 36, padding: '0 12px', gap: 6 }} onClick={() => enviar()} disabled={loading || !input.trim()} aria-label="Enviar"><DI name="send" size={15} strokeWidth={1.8} /> Enviar</button>
         </div>
       </aside>
     </>

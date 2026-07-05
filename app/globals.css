@@ -580,7 +580,18 @@ body {
 .asist-input:focus { border-color: var(--ink); }
 .asist-mic { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--hair); background: #fff; cursor: pointer; font-size: 16px; flex-shrink: 0; transition: all .15s; }
 .asist-mic:hover { border-color: var(--ink-2); }
-.asist-mic.on { background: #fee2e2; border-color: #fca5a5; animation: pulse 1.2s infinite; }
+.asist-mic { display: grid; place-items: center; color: var(--ink-2); }
+.asist-mic.on { background: #fee2e2; border-color: #fca5a5; color: #dc2626; animation: pulse 1.2s infinite; }
+
+/* Traza de pensamiento del asistente */
+.asist-think { align-self: flex-start; display: flex; flex-direction: column; gap: 8px; padding: 2px 0; }
+.asist-think-row { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--ink-2); animation: asist-step-in .3s ease both; }
+.asist-think-row.done { color: var(--faint); }
+.asist-think-ico { width: 16px; height: 16px; display: grid; place-items: center; flex-shrink: 0; color: var(--accent); }
+.asist-think-row.done .asist-think-ico { color: #10b981; }
+.asist-think-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: asist-pulse 1s ease-in-out infinite; }
+@keyframes asist-step-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+@keyframes asist-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.7); } }
 @keyframes pulse { 50% { box-shadow: 0 0 0 4px rgba(220,38,38,.12); } }
 
 /* ── Dictado / escriba clínico ── */
