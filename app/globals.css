@@ -316,6 +316,15 @@ body {
 }
 .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.met-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 24px; }
+
+/* Editor de informe: pestañas para acortar el scroll */
+.editor-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--hair); margin-bottom: 20px; overflow-x: auto; scrollbar-width: none; }
+.editor-tabs::-webkit-scrollbar { display: none; }
+.editor-tab { flex-shrink: 0; padding: 11px 16px; border: none; background: none; font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; transition: color .15s; }
+.editor-tab:hover { color: var(--ink-2); }
+.editor-tab.active { color: var(--ink); border-bottom-color: var(--ink); }
+@media (max-width: 560px) { .met-grid { grid-template-columns: 1fr; } }
 
 .form-label {
   display: block; font-size: 11.5px; font-weight: 600;

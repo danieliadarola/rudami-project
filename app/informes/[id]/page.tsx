@@ -6,6 +6,57 @@ import { supabase } from '@/app/lib/supabase'
 import Link from 'next/link'
 import { AppShell } from '@/components/layout/AppShell'
 
+/** Resumen para el fisio de lo que el paciente hace en casa con su guía:
+ *  adherencia (checks), dolor reportado y últimas dudas del chat. */
+function ActividadPaciente({ actividad, totalEjercicios, metricas }: { actividad: { checks: any[]; checkins: any[]; chat: any[] }; totalEjercicios: number; metricas: any }) {
+  const hoy = new Date()
+  const dias7 = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(hoy.getTime() - (6 - i) * 86400000)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  })
+  const checksSemana = actividad.checks.filter(c => dias7.includes(c.fecha)).length
+  const posibles = Math.max(totalEjercicios, 1) * 7
+  const adh = Math.min(100, Math.round((checksSemana / posibles) * 100))
+  const diasActivos = new Set(actividad.checks.map(c => c.fecha)).size
+  const ultimoDolor = actividad.checkins.length ? actividad.checkins[actividad.checkins.length - 1] : null
+  const dolorSesion = metricas?.dolor_fin ?? null
+  const delta = ultimoDolor && dolorSesion != null ? ultimoDolor.dolor - dolorSesion : null
+
+  return (
+    <div className="form-card" style={{ borderColor: 'var(--gold)', background: 'var(--gold-bg)' }}>
+      <div className="form-card-title">Actividad del paciente en su guía</div>
+      <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Adherencia 7 días</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: adh >= 60 ? '#10b981' : adh >= 30 ? '#d97706' : '#dc2626' }}>{adh}%</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Días activos</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)' }}>{diasActivos}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>Dolor reportado</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--ink)' }}>
+            {ultimoDolor ? `${ultimoDolor.dolor}/10` : '—'}
+            {delta != null && delta !== 0 && <span style={{ fontSize: 13, fontWeight: 600, marginLeft: 6, color: delta < 0 ? '#10b981' : '#dc2626' }}>{delta < 0 ? '↓' : '↑'} {Math.abs(delta)} vs sesión</span>}
+          </div>
+        </div>
+      </div>
+      {actividad.chat.length > 0 && (
+        <div style={{ marginTop: 14, borderTop: '1px solid var(--hair)', paddingTop: 12 }}>
+          <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 6 }}>Últimas dudas del paciente</div>
+          {actividad.chat.map((m, i) => (
+            <p key={i} style={{ fontSize: 12.5, color: 'var(--ink-2)', lineHeight: 1.5, marginBottom: 3 }}>· {m.texto}</p>
+          ))}
+        </div>
+      )}
+      {actividad.checks.length === 0 && actividad.checkins.length === 0 && (
+        <p style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 10 }}>El paciente aún no ha registrado actividad. Puedes reenviarle el enlace por WhatsApp.</p>
+      )}
+    </div>
+  )
+}
+
 const METRICAS: { k: string; l: string }[] = [
   { k: 'dolor_ini', l: 'Dolor inicial' }, { k: 'dolor_fin', l: 'Dolor final' },
   { k: 'movilidad', l: 'Movilidad' }, { k: 'fuerza', l: 'Fuerza' },
@@ -25,6 +76,8 @@ export default function EditorInforme({ params }: { params: Promise<{ id: string
   const [guardando, setGuardando] = useState(false)
   const [buscar, setBuscar] = useState('')
   const [link, setLink] = useState('')
+  const [actividad, setActividad] = useState<{ checks: any[]; checkins: any[]; chat: any[] } | null>(null)
+  const [tab, setTab] = useState<'sesion' | 'guia' | 'ejercicios' | 'notas'>('sesion')
 
   const set = (k: string, v: any) => setInf((p: any) => ({ ...p, [k]: v }))
   const setMet = (k: string, v: any) => setInf((p: any) => ({ ...p, metricas: { ...(p.metricas || {}), [k]: v } }))
@@ -45,6 +98,16 @@ export default function EditorInforme({ params }: { params: Promise<{ id: string
       supabase.from('informe_ejercicios').select('*').eq('informe_id', id).order('orden'),
     ])
     setPac(p); setSes(s); setLib(l ?? []); setEjs(e ?? [])
+
+    // Actividad del paciente en su guía (solo si está publicada)
+    if (i.estado === 'publicado') {
+      const [{ data: ck }, { data: ci }, { data: ch }] = await Promise.all([
+        supabase.from('guia_checks').select('informe_ejercicio_id, fecha').eq('informe_id', id),
+        supabase.from('guia_checkins').select('fecha, dolor').eq('informe_id', id).order('fecha'),
+        supabase.from('guia_chat').select('rol, texto, created_at').eq('informe_id', id).eq('rol', 'paciente').order('created_at', { ascending: false }).limit(5),
+      ])
+      setActividad({ checks: ck ?? [], checkins: ci ?? [], chat: ch ?? [] })
+    }
   }, [id, router])
   useEffect(() => { cargar() }, [cargar])
 
@@ -65,22 +128,52 @@ export default function EditorInforme({ params }: { params: Promise<{ id: string
     await supabase.from('informes').update({
       tipo_sesion: inf.tipo_sesion, duracion_min: inf.duracion_min, numero_sesion: inf.numero_sesion, total_sesiones: inf.total_sesiones,
       resumen: inf.resumen, explicacion: inf.explicacion, que_esperar: inf.que_esperar, recomendaciones: inf.recomendaciones,
-      motivacion: inf.motivacion, metricas: inf.metricas, updated_at: new Date().toISOString(),
-      ...(publicar ? { estado: 'publicado' } : {}),
+      motivacion: inf.motivacion, metricas: inf.metricas, notas_fisio: inf.notas_fisio, updated_at: new Date().toISOString(),
+      ...(publicar ? { estado: 'publicado', publicado_at: new Date().toISOString() } : {}),
     }).eq('id', id)
-    await supabase.from('informe_ejercicios').delete().eq('informe_id', id)
-    if (ejs.length) {
-      await supabase.from('informe_ejercicios').insert(ejs.map((e, i) => ({
+
+    // Guardado NO destructivo de ejercicios: se actualiza por id en vez de
+    // borrar y reinsertar, para conservar los checks del paciente en su guía.
+    const { data: existentes } = await supabase.from('informe_ejercicios').select('id').eq('informe_id', id)
+    const idsActuales = new Set(ejs.filter(e => e.id).map(e => e.id))
+    const aBorrar = (existentes ?? []).map(x => x.id).filter(x => !idsActuales.has(x))
+    if (aBorrar.length) await supabase.from('informe_ejercicios').delete().in('id', aBorrar)
+    for (let i = 0; i < ejs.length; i++) {
+      const e = ejs[i]
+      const fila = {
         informe_id: id, nombre: e.nombre, instrucciones: e.instrucciones, musculos: e.musculos, nivel: e.nivel,
-        series: e.series, repeticiones: e.repeticiones, descanso: e.descanso, duracion: e.duracion,
-        errores: e.errores, consejos: e.consejos, imagen_url: e.imagen_url, gif_url: e.gif_url, orden: i,
-      })))
+        series: e.series, repeticiones: e.repeticiones, frecuencia: e.frecuencia, descanso: e.descanso, duracion: e.duracion,
+        errores: e.errores, consejos: e.consejos, imagen_url: e.imagen_url, gif_url: e.gif_url, video_url: e.video_url, nota: e.nota, orden: i,
+      }
+      if (e.id) await supabase.from('informe_ejercicios').update(fila).eq('id', e.id)
+      else {
+        const { data: nuevo } = await supabase.from('informe_ejercicios').insert(fila).select('id').single()
+        if (nuevo) setEjs(p => p.map((x, j) => j === i ? { ...x, id: nuevo.id } : x))
+      }
     }
+
+    // Al publicar: la IA anticipa las dudas del paciente (FAQ + explicación
+    // llana por ejercicio) y se guarda en el informe. Coste único, sin latencia
+    // para el paciente. Si falla, la guía se publica igual.
+    if (publicar) {
+      try {
+        const contexto = {
+          resumen: inf.resumen, explicacion: inf.explicacion, que_esperar: inf.que_esperar,
+          recomendaciones: inf.recomendaciones,
+          ejercicios: ejs.map(e => ({ nombre: e.nombre, instrucciones: e.instrucciones, series: e.series, repeticiones: e.repeticiones, frecuencia: e.frecuencia, descanso: e.descanso, errores: e.errores, consejos: e.consejos, nota: e.nota })),
+        }
+        const r = await fetch('/api/generar-informe', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ modo: 'faq_paciente', contexto_guia: JSON.stringify(contexto) }) })
+        const d = await r.json()
+        if (d.faq_paciente) { await supabase.from('informes').update({ faq: d.faq_paciente }).eq('id', id); set('faq', d.faq_paciente) }
+      } catch {}
+    }
+
     setGuardando(false)
     if (publicar) { set('estado', 'publicado'); setLink(`${window.location.origin}/r/${inf.token}`) }
   }
 
-  const addEj = (x: any) => setEjs(p => [...p, { nombre: x.nombre, instrucciones: x.instrucciones, musculos: x.musculos, nivel: x.nivel, errores: x.errores, consejos: x.consejos, imagen_url: x.imagen_url, gif_url: x.gif_url, series: 3, repeticiones: '10', descanso: '30 s', duracion: '' }])
+  const addEj = (x: any) => setEjs(p => [...p, { nombre: x.nombre, instrucciones: x.instrucciones, musculos: x.musculos, nivel: x.nivel, errores: x.errores, consejos: x.consejos, imagen_url: x.imagen_url, gif_url: x.gif_url, video_url: x.video_url ?? '', nota: '', series: 3, repeticiones: '10', frecuencia: '1×/día', descanso: '30 s', duracion: '' }])
   const setEj = (i: number, k: string, v: any) => setEjs(p => p.map((e, j) => j === i ? { ...e, [k]: v } : e))
   const delEj = (i: number) => setEjs(p => p.filter((_, j) => j !== i))
 
@@ -97,10 +190,11 @@ export default function EditorInforme({ params }: { params: Promise<{ id: string
             <h1 className="page-title">Informe inteligente</h1>
             <p className="page-sub">Genera, edita y comparte el informe del paciente.</p>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Link href={`/informes/${id}/clinico`} className="btn-line">Ver informe clínico</Link>
             <button className="btn-line" onClick={generar} disabled={gen}>{gen ? 'Generando…' : '✦ Generar con IA'}</button>
             <button className="btn-line" onClick={() => guardar(false)} disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar'}</button>
-            <button className="btn-ink" onClick={() => guardar(true)} disabled={guardando}>Publicar y compartir</button>
+            <button className="btn-ink" onClick={() => guardar(true)} disabled={guardando}>{guardando ? 'Publicando…' : 'Publicar y compartir'}</button>
           </div>
         </div>
 
@@ -108,13 +202,24 @@ export default function EditorInforme({ params }: { params: Promise<{ id: string
           <div className="alert-ok" style={{ marginBottom: 18, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <span>Publicado. Enlace para el paciente: <a href={link} target="_blank" style={{ color: '#15803d', textDecoration: 'underline' }}>{link}</a></span>
             <span style={{ display: 'flex', gap: 8 }}>
-              <a className="btn-line" href={`https://wa.me/?text=${encodeURIComponent('Tu informe de fisioterapia: ' + link)}`} target="_blank">WhatsApp</a>
-              <a className="btn-line" href={`mailto:?subject=Tu informe de fisioterapia&body=${encodeURIComponent(link)}`}>Email</a>
+              <a className="btn-line" href={`https://wa.me/?text=${encodeURIComponent('Tu guía de recuperación: ' + link)}`} target="_blank">WhatsApp</a>
+              <a className="btn-line" href={`mailto:?subject=Tu guía de recuperación&body=${encodeURIComponent(link)}`}>Email</a>
               <a className="btn-line" href={link} target="_blank">Ver / PDF</a>
             </span>
           </div>
         )}
 
+        {/* Actividad del paciente en su guía */}
+        {actividad && <ActividadPaciente actividad={actividad} totalEjercicios={ejs.length} metricas={inf.metricas} />}
+
+        {/* Pestañas */}
+        <div className="editor-tabs" role="tablist">
+          {([['sesion', 'Sesión'], ['guia', 'Guía del paciente'], ['ejercicios', `Ejercicios${ejs.length ? ` (${ejs.length})` : ''}`], ['notas', 'Notas internas']] as const).map(([k, l]) => (
+            <button key={k} role="tab" aria-selected={tab === k} className={`editor-tab${tab === k ? ' active' : ''}`} onClick={() => setTab(k)}>{l}</button>
+          ))}
+        </div>
+
+        {tab === 'sesion' && (<>
         {/* Cabecera editable */}
         <div className="form-card">
           <div className="form-card-title">Cabecera</div>
@@ -133,7 +238,7 @@ export default function EditorInforme({ params }: { params: Promise<{ id: string
         {/* Métricas */}
         <div className="form-card">
           <div className="form-card-title">Indicadores de seguimiento (0–10)</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px 24px' }}>
+          <div className="met-grid">
             {METRICAS.map(m => {
               const val = inf.metricas?.[m.k] ?? 0
               return (
@@ -145,8 +250,10 @@ export default function EditorInforme({ params }: { params: Promise<{ id: string
             })}
           </div>
         </div>
+        </>)}
 
-        {/* Textos */}
+        {tab === 'guia' && (
+        /* Textos */
         <div className="form-card">
           <div className="form-card-title">Lo importante de hoy</div>
           <textarea className="form-textarea" rows={2} value={inf.resumen ?? ''} onChange={e => set('resumen', e.target.value)} placeholder="Resumen de la sesión…" />
@@ -171,8 +278,18 @@ export default function EditorInforme({ params }: { params: Promise<{ id: string
           <div className="form-card-title" style={{ marginTop: 18 }}>Mensaje de motivación</div>
           <textarea className="form-textarea" rows={2} value={inf.motivacion ?? ''} onChange={e => set('motivacion', e.target.value)} />
         </div>
+        )}
 
-        {/* Ejercicios */}
+        {tab === 'notas' && (
+        /* Notas internas */
+        <div className="form-card">
+          <div className="form-card-title">Notas internas <span style={{ fontWeight: 400, color: 'var(--faint)', textTransform: 'none', letterSpacing: 0 }}>· solo visibles para la clínica, no se publican al paciente</span></div>
+          <textarea className="form-textarea" rows={3} value={inf.notas_fisio ?? ''} onChange={e => set('notas_fisio', e.target.value)} placeholder="Observaciones para el equipo, banderas a vigilar, contexto que no debe ver el paciente…" />
+        </div>
+        )}
+
+        {tab === 'ejercicios' && (
+        /* Ejercicios */
         <div className="form-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
             <div className="form-card-title">Ejercicios personalizados</div>
@@ -187,7 +304,16 @@ export default function EditorInforme({ params }: { params: Promise<{ id: string
               <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                 <div><label className="form-label">Series</label><input className="form-input" style={{ width: 70 }} value={e.series} onChange={ev => setEj(i, 'series', ev.target.value)} /></div>
                 <div><label className="form-label">Reps</label><input className="form-input" style={{ width: 80 }} value={e.repeticiones} onChange={ev => setEj(i, 'repeticiones', ev.target.value)} /></div>
+                <div><label className="form-label">Frecuencia</label><input className="form-input" style={{ width: 100 }} value={e.frecuencia ?? ''} onChange={ev => setEj(i, 'frecuencia', ev.target.value)} placeholder="2×/día" /></div>
                 <div><label className="form-label">Descanso</label><input className="form-input" style={{ width: 90 }} value={e.descanso} onChange={ev => setEj(i, 'descanso', ev.target.value)} /></div>
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <label className="form-label">Vídeo (YouTube, opcional)</label>
+                <input className="form-input" value={e.video_url ?? ''} onChange={ev => setEj(i, 'video_url', ev.target.value)} placeholder="https://www.youtube.com/watch?v=…" />
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <label className="form-label">Comentario para este paciente <span style={{ fontWeight: 400, textTransform: 'none' }}>· opcional, se muestra junto al ejercicio</span></label>
+                <input className="form-input" value={e.nota ?? ''} onChange={ev => setEj(i, 'nota', ev.target.value)} placeholder="Ej. hazlo solo si no aparece dolor agudo…" />
               </div>
             </div>
           ))}
@@ -198,6 +324,7 @@ export default function EditorInforme({ params }: { params: Promise<{ id: string
             ))}
           </div>
         </div>
+        )}
       </div>
     </AppShell>
   )
