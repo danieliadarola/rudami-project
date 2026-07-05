@@ -45,8 +45,9 @@ export default function InformesPage() {
         <div className="page-head">
           <div>
             <h1 className="page-title">Informes del paciente</h1>
-            <p className="page-sub">Informes inteligentes generados y compartidos. Se crean desde la ficha de cada paciente.</p>
+            <p className="page-sub">Guías de recuperación generadas y compartidas. Se crean desde la ficha de cada paciente.</p>
           </div>
+          <button className="btn-line" onClick={() => router.push('/configuracion/ejercicios')}>Biblioteca de ejercicios</button>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
