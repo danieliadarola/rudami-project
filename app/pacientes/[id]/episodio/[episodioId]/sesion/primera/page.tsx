@@ -8,6 +8,7 @@ import { supabase } from '@/app/lib/supabase'
 import { AppShell } from '@/components/layout/AppShell'
 import { DI } from '@/components/ui/DashboardIcons'
 import { EvaSlider } from '@/components/sesion/EvaSlider'
+import { MetricasSesion } from '@/components/sesion/MetricasSesion'
 import { Copiloto } from '@/components/sesion/Copiloto'
 import { Dictado } from '@/components/sesion/Dictado'
 
@@ -38,6 +39,7 @@ export default function NuevaSesion({ params }: { params: Promise<{ id: string; 
     anamnesis: '', antecedentes_personales: '', antecedentes_familiares: '',
     exploracion_fisica: '', tests_ortopedicos: '', hipotesis_principal: '',
     derivacion_texto: '', dolor_eva: 5,
+    movilidad: 5, fuerza: 5, rigidez: 5, fatiga: 5, sueno: 5, adherencia: 5,
   })
   const set = (k: string, v: any) => setF(prev => ({ ...prev, [k]: v }))
 
@@ -85,6 +87,7 @@ export default function NuevaSesion({ params }: { params: Promise<{ id: string; 
   const showExploracion  = modo !== 'rapida'
   const showTests        = modo === 'completa'
   const showRazonamiento = modo !== 'rapida'
+  const showMetricas     = modo !== 'rapida'
 
   const guardar = async (conInforme: boolean) => {
     setLoading(true); setError('')
@@ -127,6 +130,12 @@ export default function NuevaSesion({ params }: { params: Promise<{ id: string; 
       derivacion: showRazonamiento ? !!f.derivacion_texto.trim() : false,
       notas: f.derivacion_texto ? `Derivación sugerida: ${f.derivacion_texto}` : null,
       dolor_eva: f.dolor_eva,
+      movilidad: showMetricas ? f.movilidad : null,
+      fuerza: showMetricas ? f.fuerza : null,
+      rigidez: showMetricas ? f.rigidez : null,
+      fatiga: showMetricas ? f.fatiga : null,
+      sueno: showMetricas ? f.sueno : null,
+      adherencia: showMetricas ? f.adherencia : null,
       diagnostico_ia,
     }])
 
@@ -236,6 +245,16 @@ export default function NuevaSesion({ params }: { params: Promise<{ id: string; 
         <div className="eva-card">
           <EvaSlider value={f.dolor_eva} onChange={v => set('dolor_eva', v)} />
         </div>
+
+        {showMetricas && (
+          <>
+            <div className="form-section-h">Indicadores de seguimiento <span className="hint">se heredan en el informe</span></div>
+            <MetricasSesion
+              value={{ movilidad: f.movilidad, fuerza: f.fuerza, rigidez: f.rigidez, fatiga: f.fatiga, sueno: f.sueno, adherencia: f.adherencia }}
+              onChange={(k, v) => set(k, v)}
+            />
+          </>
+        )}
 
         {showRazonamiento && (
           <>

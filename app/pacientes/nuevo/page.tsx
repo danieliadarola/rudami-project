@@ -68,7 +68,7 @@ export default function NuevoPaciente() {
 
     const propietario = esAdmin ? form.fisio_asignado : userId
 
-    const { error } = await supabase.from('pacientes').insert([{
+    const { data: creado, error } = await supabase.from('pacientes').insert([{
       nombre: form.nombre,
       apellidos: form.apellidos,
       fecha_nacimiento: form.fecha_nacimiento || null,
@@ -80,7 +80,7 @@ export default function NuevoPaciente() {
       antecedentes: form.antecedentes,
       user_id: propietario,
       clinica_id: clinicaId,
-    }])
+    }]).select('id').single()
 
     if (error) {
       setError('Error al guardar el paciente. Inténtalo de nuevo.')
@@ -88,13 +88,14 @@ export default function NuevoPaciente() {
       return
     }
 
-    router.push(esAdmin ? '/admin' : '/dashboard')
+    // Tras crear, a la ficha del paciente (siguiente paso natural: abrir consulta)
+    router.push(creado ? `/pacientes/${creado.id}` : '/pacientes')
   }
 
   return (
     <AppShell>
       <div className="page-wrap-sm">
-        <button onClick={() => router.push(esAdmin ? '/admin' : '/dashboard')} className="back-link">← Volver</button>
+        <button onClick={() => router.push('/pacientes')} className="back-link">← Volver a pacientes</button>
 
         <div className="page-head">
           <div>
