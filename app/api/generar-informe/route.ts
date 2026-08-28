@@ -3,12 +3,18 @@
 // Toda la lógica de IA vive en app/lib/ai/ (proveedor desacoplado).
 
 import { NextResponse } from 'next/server'
-import { generarInforme } from '@/app/lib/ai'
+import { createClient } from '@/app/lib/supabase-server'
+import { generarInforme, RateLimitError } from '@/app/lib/ai'
 import type { DatosClinicos, ModoIA } from '@/app/lib/ai'
 
 export async function POST(request: Request) {
-  console.log('🧠 Motor de razonamiento clínico activado')
   try {
+    // Sin esto el endpoint es un proxy de IA abierto contra la cuota de Groq:
+    // es el único que el Proxy de Next no cubre (el matcher excluye /api).
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+
     const body = await request.json()
     const modo: ModoIA = body.modo ?? 'informe'
 
@@ -39,6 +45,13 @@ export async function POST(request: Request) {
     const resultado = await generarInforme(modo, datos)
     return NextResponse.json(resultado)
   } catch (error) {
+    // Cuota por minuto agotada: la UI lo trata como espera, no como fallo.
+    if (error instanceof RateLimitError) {
+      return NextResponse.json(
+        { error: 'La IA está saturada. Espera unos segundos.', rate_limit: true },
+        { status: 429 },
+      )
+    }
     console.error('❌ Error en motor clínico:', error)
     return NextResponse.json(
       { error: 'Error al procesar la solicitud clínica' },

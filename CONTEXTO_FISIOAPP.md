@@ -8,7 +8,7 @@ SaaS de gestión clínica para fisioterapia (España). **Multi-clínica** (multi
 - Usuarios reales: Daniel Iadarola (admin, azul), Felipe Gil, Miguel Rodríguez, Rui Gomes (fisios).
 
 ## Stack
-Next.js 16 (App Router) + TypeScript · Supabase (PostgreSQL + Auth + RLS) · **Groq** `llama-3.3-70b` (capa de IA desacoplada en `app/lib/ai/`, cambiable a un modelo médico) · FullCalendar · jsPDF · Vercel. Auth SSR real con **`proxy.ts`** (Next 16) + `@supabase/ssr`.
+Next.js 16 (App Router) + TypeScript · Supabase (PostgreSQL + Auth + RLS) · **Groq** `openai/gpt-oss-20b` (tramo gratuito, con `reasoning_effort:low`; capa de IA desacoplada en `app/lib/ai/`, cambiable a un modelo médico). Groq retiró `llama-3.3-70b-versatile` el 16/08/2026 — el modelo activo vive en la constante `MODELO` de `app/lib/ai/groq.ts`, que comparte el asistente · FullCalendar · jsPDF · Vercel. Auth SSR real con **`proxy.ts`** (Next 16) + `@supabase/ssr`.
 
 ## Diseño
 Sistema **v3 "Quiet Precision"**: blanco editorial, hairlines, tokens (`--ink/--muted/--hair/--accent`), fuentes **Geist** + **Newsreader** italic (saludos/nombres). Nada de gradientes chillones ni emojis. Tono ejecutivo/clínico.

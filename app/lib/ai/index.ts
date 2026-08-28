@@ -83,3 +83,6 @@ export async function generarInforme(
 }
 
 export type { DatosClinicos, ModoIA, ResultadoIA, CopilotoOutput, ExtraccionOutput, InformePacienteOutput, FaqPacienteOutput } from './types'
+// RateLimitError es una clase (valor, no tipo): se reexporta aparte para que
+// los route handlers puedan hacer 'instanceof' sin conocer el proveedor.
+export { RateLimitError } from './types'

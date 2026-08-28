@@ -13,6 +13,7 @@ const RUTAS_PROTEGIDAS = [
   '/admin',
   '/informes',
   '/bonos',
+  '/configuracion',
 ]
 
 function requiereAuth(pathname: string): boolean {

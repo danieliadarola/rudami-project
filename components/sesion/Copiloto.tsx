@@ -35,7 +35,7 @@ const Bloque = ({ titulo, children }: { titulo: string; children: React.ReactNod
   </div>
 )
 
-export function Copiloto({ data, analizando, onPregunta }: { data: CopilotoData | null; analizando: boolean; onPregunta?: (campo: string) => void }) {
+export function Copiloto({ data, analizando, aviso, onPregunta }: { data: CopilotoData | null; analizando: boolean; aviso?: string | null; onPregunta?: (campo: string) => void }) {
   const alerta = data?.nivel_alerta ? ALERTA[data.nivel_alerta] : null
   const peligro = !!data && (data.nivel_alerta === 'rojo' || (data.red_flags?.length ?? 0) > 0)
 
@@ -49,6 +49,12 @@ export function Copiloto({ data, analizando, onPregunta }: { data: CopilotoData 
           ? <span style={{ fontSize: 11.5, color: 'var(--faint)' }}>analizando…</span>
           : alerta && <span style={{ fontSize: 11.5, fontWeight: 600, color: alerta.c, display: 'inline-flex', alignItems: 'center', gap: 5 }}><span style={{ width: 7, height: 7, borderRadius: '50%', background: alerta.c }} />{alerta.t}</span>}
       </div>
+
+      {aviso && (
+        <div style={{ marginTop: 12, padding: '8px 11px', borderRadius: 9, background: 'var(--paper-2)', border: '1px solid var(--hair)', fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
+          {aviso}
+        </div>
+      )}
 
       {peligro && (
         <div style={{ marginTop: 12, padding: '8px 11px', borderRadius: 9, background: '#fef2f2', border: '1px solid #fecaca', fontSize: 12, fontWeight: 600, color: '#b91c1c' }}>

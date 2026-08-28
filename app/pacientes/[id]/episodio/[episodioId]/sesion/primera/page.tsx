@@ -34,6 +34,7 @@ export default function NuevaSesion({ params }: { params: Promise<{ id: string; 
   const [error, setError] = useState('')
   const [copiloto, setCopiloto] = useState<any>(null)
   const [analizando, setAnalizando] = useState(false)
+  const [avisoIA, setAvisoIA] = useState<string | null>(null)
 
   const [f, setF] = useState({
     anamnesis: '', antecedentes_personales: '', antecedentes_familiares: '',
@@ -76,10 +77,20 @@ export default function NuevaSesion({ params }: { params: Promise<{ id: string; 
           }),
         })
         const data = await resp.json()
-        setCopiloto(data.copiloto ?? null)
-      } catch { /* silencioso */ }
+        if (resp.status === 429) {
+          // Free tier de Groq: 8.000 tokens/min. No es un fallo, es una espera.
+          setAvisoIA('La IA está saturada por el límite gratuito. Sigue escribiendo: se reintenta en unos segundos.')
+        } else if (!resp.ok) {
+          setAvisoIA('El análisis en vivo no está disponible ahora mismo.')
+        } else {
+          setAvisoIA(null)
+          setCopiloto(data.copiloto ?? null)
+        }
+      } catch {
+        setAvisoIA('Sin conexión con el motor clínico.')
+      }
       setAnalizando(false)
-    }, 1200)
+    }, 2500)
     return () => clearTimeout(t)
   }, [f.anamnesis, f.antecedentes_personales, f.exploracion_fisica, f.tests_ortopedicos, f.dolor_eva, modo, paciente])
 
@@ -280,7 +291,7 @@ export default function NuevaSesion({ params }: { params: Promise<{ id: string; 
         </div>
         </div>
 
-        <Copiloto data={copiloto} analizando={analizando} onPregunta={irACampo} />
+        <Copiloto data={copiloto} analizando={analizando} aviso={avisoIA} onPregunta={irACampo} />
         </div>
       </div>
     </AppShell>

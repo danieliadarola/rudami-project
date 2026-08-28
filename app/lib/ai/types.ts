@@ -96,6 +96,18 @@ export type ResultadoIA =
   | { faq_paciente: FaqPacienteOutput | null; error?: string }
   | { respuesta_guia: string | null; error?: string }
 
+/** El proveedor ha agotado su cuota por minuto (Groq free tier: 8.000
+ *  tokens/min). Se distingue del resto de errores para que la UI avise de una
+ *  espera en vez de mostrar un fallo genérico. Independiente del proveedor. */
+export class RateLimitError extends Error {
+  readonly retryAfter?: number
+  constructor(retryAfter?: number) {
+    super('Límite de peticiones de la IA alcanzado')
+    this.name = 'RateLimitError'
+    this.retryAfter = retryAfter
+  }
+}
+
 /** Parámetros de una llamada de razonamiento de bajo nivel. */
 export interface RazonarParams {
   prompt: string

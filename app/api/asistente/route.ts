@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import Groq from 'groq-sdk'
 import { createClient } from '@/app/lib/supabase-server'
 import { TOOLS, DESTRUCTIVAS, ejecutarTool, type Ctx } from '@/app/lib/ai/asistente'
+import { MODELO } from '@/app/lib/ai/groq'
 
 const client = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
@@ -76,8 +77,9 @@ export async function POST(request: Request) {
 
     for (let i = 0; i < 5; i++) {
       const completion = await client.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
+        model: MODELO,
         messages, tools: TOOLS as any, tool_choice: 'auto', temperature: 0.2, max_tokens: 900,
+        reasoning_effort: 'low',
       })
       const msg = completion.choices[0]?.message
       if (!msg) break
