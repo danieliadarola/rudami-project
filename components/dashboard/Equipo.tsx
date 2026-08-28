@@ -44,7 +44,7 @@ export function Equipo({ equipo }: { equipo: CargaFisio[] }) {
         ))}
 
         {visibles.length === 0 && (
-          <p style={{ fontSize: 13, color: '#9aa1af', padding: '20px 0' }}>
+          <p style={{ fontSize: 13, color: 'var(--faint)', padding: '20px 0' }}>
             Sin actividad registrada hoy.
           </p>
         )}

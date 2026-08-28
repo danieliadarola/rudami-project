@@ -18,7 +18,7 @@ export interface Bandera {
 const nivelMeta = {
   alto:  { color: '#dc2626', label: 'Alta'  },
   medio: { color: '#d97706', label: 'Media' },
-  bajo:  { color: '#9aa1af', label: 'Baja'  },
+  bajo:  { color: 'var(--faint)', label: 'Baja'  },
 }
 
 export function Alertas({ banderas }: { banderas: Bandera[] }) {
@@ -59,7 +59,7 @@ export function Alertas({ banderas }: { banderas: Bandera[] }) {
         })}
 
         {banderas.length === 0 && (
-          <p style={{ fontSize: 13, color: '#9aa1af', padding: '20px 0' }}>
+          <p style={{ fontSize: 13, color: 'var(--faint)', padding: '20px 0' }}>
             Sin alertas activas. Buen trabajo del equipo.
           </p>
         )}

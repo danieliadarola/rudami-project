@@ -55,7 +55,7 @@ export function Sidebar({ perfil, pacientesCount, citasHoyCount, onSignOut }: Pr
           })}
 
           <span className="sidebar-section">Sistema</span>
-          <Link href="/admin" onClick={cerrar} className={`sidebar-item${pathname === '/admin' ? ' active' : ''}`}>
+          <Link href="/configuracion" onClick={cerrar} className={`sidebar-item${pathname.startsWith('/configuracion') ? ' active' : ''}`}>
             <DI name="settings" size={17} strokeWidth={1.7} />
             <span>Configuración</span>
           </Link>
@@ -66,12 +66,12 @@ export function Sidebar({ perfil, pacientesCount, citasHoyCount, onSignOut }: Pr
             {ini}
           </span>
           <div style={{ minWidth: 0 }}>
-            <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#16181f', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {perfil.nombre} {perfil.apellidos}
             </span>
-            <span style={{ fontSize: 11.5, color: '#707888' }}>{rolLabel}</span>
+            <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{rolLabel}</span>
           </div>
-          <button onClick={onSignOut} title="Cerrar sesión" style={{ marginLeft: 'auto', width: 32, height: 32, borderRadius: 8, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'none', border: 'none', cursor: 'pointer', color: '#9aa1af' }}>
+          <button onClick={onSignOut} title="Cerrar sesión" style={{ marginLeft: 'auto', width: 32, height: 32, borderRadius: 8, flexShrink: 0, display: 'grid', placeItems: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--faint)' }}>
             <DI name="logout" size={16} strokeWidth={1.7} />
           </button>
         </div>

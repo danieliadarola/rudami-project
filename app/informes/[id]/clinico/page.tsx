@@ -205,7 +205,7 @@ export default function InformeClinico({ params }: { params: Promise<{ id: strin
             </Seccion>
           )}
 
-          <div className="rep-card" style={{ background: '#f8f9fc' }}>
+          <div className="rep-card" style={{ background: 'var(--paper-2)' }}>
             <p style={{ fontSize: 11.5, color: 'var(--muted)', lineHeight: 1.6 }}>
               ⚕ Informe de soporte a la decisión clínica generado con asistencia de IA. No constituye diagnóstico médico ni sustituye el juicio del fisioterapeuta colegiado responsable.
               {fisio && (fisio.nombre || fisio.numero_colegiado) && <> Responsable: {fisio.nombre} {fisio.apellidos}{fisio.numero_colegiado ? ` · Nº colegiado ${fisio.numero_colegiado}` : ''}.</>}

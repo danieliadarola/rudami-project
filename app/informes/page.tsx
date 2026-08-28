@@ -69,7 +69,7 @@ export default function InformesPage() {
             {busqueda || filtro !== 'todos' ? 'Sin resultados.' : 'Aún no hay informes. Entra en un paciente y pulsa "✦ Informe" para crear el primero.'}
           </div>
         ) : (
-          <div style={{ background: '#fff', border: '1px solid var(--hair)', borderRadius: 14, overflow: 'hidden' }}>
+          <div style={{ background: 'var(--paper)', border: '1px solid var(--hair)', borderRadius: 14, overflow: 'hidden' }}>
             {filtrados.map((s, i) => {
               const est = ESTADO[s.estado] ?? ESTADO.borrador
               return (

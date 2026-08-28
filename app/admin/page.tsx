@@ -58,26 +58,26 @@ export default async function AdminPanel() {
             <h1 className="page-title">Panel de administración</h1>
             <p className="page-sub">{perfil?.clinicas?.nombre} · Vista completa de la clínica</p>
           </div>
-          <div style={{ background: '#fff', border: '1px solid var(--hair)', borderRadius: 9, padding: '8px 14px', fontSize: 12, color: 'var(--ink-2)', fontWeight: 500 }}>
+          <div style={{ background: 'var(--paper)', border: '1px solid var(--hair)', borderRadius: 9, padding: '8px 14px', fontSize: 12, color: 'var(--ink-2)', fontWeight: 500 }}>
             {mesActual.charAt(0).toUpperCase() + mesActual.slice(1)}
           </div>
         </div>
 
         {/* KPIs */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 24 }}>
-          <div style={{ background: '#fff', borderRadius: 14, padding: '20px 22px', border: '1px solid var(--hair)', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ background: 'var(--paper)', borderRadius: 14, padding: '20px 22px', border: '1px solid var(--hair)', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#4f5fe8' }} />
             <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.08em' }}>Fisioterapeutas</div>
             <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--ink)', marginTop: 6, letterSpacing: '-1.5px', lineHeight: 1 }}>{fisios?.length ?? 0}</div>
             <div style={{ fontSize: 12, color: 'var(--faint)', marginTop: 6 }}>En la clínica</div>
           </div>
-          <div style={{ background: '#fff', borderRadius: 14, padding: '20px 22px', border: '1px solid var(--hair)', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ background: 'var(--paper)', borderRadius: 14, padding: '20px 22px', border: '1px solid var(--hair)', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#10b981' }} />
             <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.08em' }}>Pacientes totales</div>
             <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--ink)', marginTop: 6, letterSpacing: '-1.5px', lineHeight: 1 }}>{pacientes?.length ?? 0}</div>
             <div style={{ fontSize: 12, color: 'var(--faint)', marginTop: 6 }}>En toda la clínica</div>
           </div>
-          <div style={{ background: '#fff', borderRadius: 14, padding: '20px 22px', border: '1px solid var(--hair)', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ background: 'var(--paper)', borderRadius: 14, padding: '20px 22px', border: '1px solid var(--hair)', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#6366f1' }} />
             <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.08em' }}>Sesiones este mes</div>
             <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--ink)', marginTop: 6, letterSpacing: '-1.5px', lineHeight: 1 }}>{sesionesmes?.length ?? 0}</div>
@@ -86,7 +86,7 @@ export default async function AdminPanel() {
         </div>
 
         {/* Equipo */}
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid var(--hair)', padding: 22, marginBottom: 16 }}>
+        <div style={{ background: 'var(--paper)', borderRadius: 14, border: '1px solid var(--hair)', padding: 22, marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>Equipo de fisioterapeutas</h2>
             <Link href="/admin/nuevo-fisio" className="btn-ink">+ Añadir fisio</Link>
@@ -122,7 +122,7 @@ export default async function AdminPanel() {
         </div>
 
         {/* Pacientes */}
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid var(--hair)', padding: 22 }}>
+        <div style={{ background: 'var(--paper)', borderRadius: 14, border: '1px solid var(--hair)', padding: 22 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>
               Todos los pacientes

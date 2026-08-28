@@ -37,6 +37,7 @@ export function Asistente({ open, onClose }: { open: boolean; onClose: () => voi
   const [typing, setTyping] = useState(false)
 
   useEffect(() => { scrollRef.current?.scrollTo({ top: 9e9 }) }, [messages, loading, pendiente])
+  useEffect(() => { try { if (localStorage.getItem('rudami-voz') === '1') setVozOn(true) } catch {} }, [])
 
   const hablar = (txt: string) => {
     if (!vozOn || typeof window === 'undefined' || !window.speechSynthesis) return

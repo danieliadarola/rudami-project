@@ -61,9 +61,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div style={{
         display: 'flex', height: '100vh',
         alignItems: 'center', justifyContent: 'center',
-        background: '#fff',
+        background: 'var(--paper)',
       }}>
-        <span style={{ fontSize: 13, color: '#9aa1af' }}>Cargando…</span>
+        <span style={{ fontSize: 13, color: 'var(--faint)' }}>Cargando…</span>
       </div>
     )
   }

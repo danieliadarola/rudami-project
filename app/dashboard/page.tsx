@@ -181,8 +181,8 @@ export default function DashboardPage() {
 
   if (cargando || !perfil) {
     return (
-      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: '#fff' }}>
-        <span style={{ fontSize: 13, color: '#9aa1af' }}>Cargando…</span>
+      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: 'var(--paper)' }}>
+        <span style={{ fontSize: 13, color: 'var(--faint)' }}>Cargando…</span>
       </div>
     )
   }

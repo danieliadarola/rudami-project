@@ -83,7 +83,7 @@ export default function TiposBonoPage() {
                 <input type="number" value={t.precio} onChange={e => actualizar(t.id, { precio: Number(e.target.value) })} className="form-input" />
                 <input type="number" value={t.validez_dias} onChange={e => actualizar(t.id, { validez_dias: parseInt(e.target.value) || 365 })} className="form-input" />
                 <button onClick={() => actualizar(t.id, { activo: !t.activo })} className="btn-line" style={{ height: 34, padding: '0 8px', fontSize: 12 }}>{t.activo ? 'Activo' : 'Oculto'}</button>
-                <button onClick={() => eliminar(t.id)} title="Eliminar" style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--hair)', background: '#fff', color: 'var(--danger)', cursor: 'pointer', fontSize: 15 }}>×</button>
+                <button onClick={() => eliminar(t.id)} title="Eliminar" style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--hair)', background: 'var(--paper)', color: 'var(--danger)', cursor: 'pointer', fontSize: 15 }}>×</button>
               </div>
             ))}
           </div>

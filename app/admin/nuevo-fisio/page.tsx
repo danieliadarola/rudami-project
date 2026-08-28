@@ -74,7 +74,7 @@ export default function NuevoFisio() {
     return (
       <AppShell>
         <div className="page-wrap-sm">
-          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid var(--hair)', padding: 40, textAlign: 'center' }}>
+          <div style={{ background: 'var(--paper)', borderRadius: 14, border: '1px solid var(--hair)', padding: 40, textAlign: 'center' }}>
             <div style={{ fontSize: 40, marginBottom: 16 }}>✅</div>
             <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>Fisioterapeuta creado</h2>
             <p style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 24 }}>

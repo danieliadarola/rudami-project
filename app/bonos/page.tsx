@@ -19,7 +19,7 @@ const DIA = 86_400_000
 const META: Record<Estado, { label: string; color: string }> = {
   activo: { label: 'Activo', color: '#10b981' }, por_caducar: { label: 'Por caducar', color: '#d97706' },
   agotado: { label: 'Agotado', color: '#64748b' }, caducado: { label: 'Caducado', color: '#dc2626' },
-  inactivo: { label: 'Inactivo', color: '#9aa1af' },
+  inactivo: { label: 'Inactivo', color: 'var(--faint)' },
 }
 function estadoDe(b: Bono): Estado {
   const r = b.total_sesiones - b.sesiones_usadas
@@ -129,9 +129,9 @@ export default function BonosPage() {
               return (
                 <button key={x.uid} onClick={() => setFisioFiltro(on ? null : x.uid)}
                   style={{ fontFamily: 'inherit', cursor: 'pointer', fontSize: 12.5, transition: 'all .15s',
-                    color: on ? '#fff' : 'var(--ink-2)', background: on ? 'var(--ink)' : 'var(--paper-2)',
+                    color: on ? 'var(--background)' : 'var(--ink-2)', background: on ? 'var(--ink)' : 'var(--paper-2)',
                     border: `1px solid ${on ? 'var(--ink)' : 'var(--hair)'}`, borderRadius: 999, padding: '5px 12px' }}>
-                  {x.nombre} · <strong style={{ color: on ? '#fff' : 'var(--ink)' }}>{x.t.toLocaleString('es-ES')}€</strong>
+                  {x.nombre} · <strong style={{ color: on ? 'var(--background)' : 'var(--ink)' }}>{x.t.toLocaleString('es-ES')}€</strong>
                 </button>
               )
             })}
@@ -233,7 +233,7 @@ function VenderBono({ clinicaId, pacientes, tiposBono, onClose, onCreado }: { cl
               return (
                 <button key={t.id} type="button" onClick={() => setTipoId(t.id)}
                   style={{ textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10,
-                    padding: '11px 14px', borderRadius: 11, border: `1px solid ${on ? 'var(--ink)' : 'var(--hair)'}`, background: on ? 'var(--paper-2)' : '#fff' }}>
+                    padding: '11px 14px', borderRadius: 11, border: `1px solid ${on ? 'var(--ink)' : 'var(--hair)'}`, background: on ? 'var(--paper-2)' : 'var(--paper)' }}>
                   <span>
                     <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ink)' }}>{t.nombre}</span>
                     <span style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{t.total_sesiones} sesiones · válido {t.validez_dias} días</span>

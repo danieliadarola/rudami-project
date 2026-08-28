@@ -131,7 +131,7 @@ function NuevaCitaForm() {
                     padding: '7px 12px', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit',
                     fontSize: 13, fontWeight: 500,
                     border: `1px solid ${activo ? t.color : 'var(--hair)'}`,
-                    background: activo ? t.color + '14' : '#fff',
+                    background: activo ? t.color + '14' : 'var(--paper)',
                     color: activo ? 'var(--ink)' : 'var(--ink-2)',
                   }}
                 >

@@ -109,7 +109,7 @@ export default function PacientesPage() {
             {busqueda ? 'Sin resultados para esa búsqueda.' : filtro === 'activos' ? 'No hay pacientes activos.' : filtro === 'alta' ? 'No hay pacientes de alta.' : 'Aún no hay pacientes registrados.'}
           </div>
         ) : (
-          <div style={{ background: '#fff', border: '1px solid var(--hair)', borderRadius: 14, overflow: 'hidden' }}>
+          <div style={{ background: 'var(--paper)', border: '1px solid var(--hair)', borderRadius: 14, overflow: 'hidden' }}>
             {filtrados.map((p, i) => (
               <div
                 key={p.id}

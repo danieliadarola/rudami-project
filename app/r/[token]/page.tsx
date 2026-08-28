@@ -15,10 +15,10 @@ export default async function ReportePublico({ params }: { params: Promise<{ tok
 
   if (!data || !data.informe) {
     return (
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#fff', textAlign: 'center', padding: 24 }}>
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'var(--paper)', textAlign: 'center', padding: 24 }}>
         <div>
-          <p style={{ fontWeight: 700, letterSpacing: '.14em', color: '#16181f' }}>RUDAMI</p>
-          <p style={{ color: '#707888', marginTop: 12 }}>Esta guía no está disponible o aún no ha sido publicada.</p>
+          <p style={{ fontWeight: 700, letterSpacing: '.14em', color: 'var(--ink)' }}>RUDAMI</p>
+          <p style={{ color: 'var(--muted)', marginTop: 12 }}>Esta guía no está disponible o aún no ha sido publicada.</p>
         </div>
       </div>
     )

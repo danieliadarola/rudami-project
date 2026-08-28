@@ -37,7 +37,7 @@ export function Topbar({ nombre, citasHoy, pendientes, onNuevaCita }: Props) {
       <div className="topbar-greet">
         <h1>{saludo()}, <strong>{nombre}</strong></h1>
         <p>
-          {fechaLarga()} · <strong style={{ color: '#16181f' }}>{citasHoy} citas</strong> hoy
+          {fechaLarga()} · <strong style={{ color: 'var(--ink)' }}>{citasHoy} citas</strong> hoy
           {pendientes > 0 && (
             <span style={{ color: '#d97706', fontWeight: 600 }}>
               {' '}· {pendientes} por confirmar

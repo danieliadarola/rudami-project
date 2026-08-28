@@ -22,7 +22,7 @@ export function ActivityChart({ data }: { data: ActividadRow[] }) {
     return (
       <section className="reveal">
         <div className="sect-head"><span className="sect-title">Actividad</span></div>
-        <p style={{ fontSize: 13, color: '#9aa1af', padding: '32px 0' }}>
+        <p style={{ fontSize: 13, color: 'var(--faint)', padding: '32px 0' }}>
           Sin actividad registrada todavía.
         </p>
       </section>

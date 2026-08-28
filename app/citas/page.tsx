@@ -25,7 +25,7 @@ interface Cita {
 const ESTADO: Record<string, { label: string; color: string; bg: string }> = {
   pendiente:  { label: 'Pendiente',  color: '#b45309', bg: '#fef3c7' },
   confirmada: { label: 'Confirmada', color: '#047857', bg: '#d1fae5' },
-  completada: { label: 'Completada', color: '#3f4654', bg: '#eef0f3' },
+  completada: { label: 'Completada', color: 'var(--ink-2)', bg: '#eef0f3' },
   cancelada:  { label: 'Cancelada',  color: '#b91c1c', bg: '#fee2e2' },
 }
 
@@ -171,7 +171,7 @@ export default function Calendario() {
               <div onClick={toggleTodos} className="cal-fisio-row">
                 <span className="cal-check" style={{
                   borderColor: fisiosFiltrados.length === fisios.length ? 'var(--ink)' : 'var(--hair)',
-                  background: fisiosFiltrados.length === fisios.length ? 'var(--ink)' : '#fff',
+                  background: fisiosFiltrados.length === fisios.length ? 'var(--ink)' : 'var(--paper)',
                 }}>{fisiosFiltrados.length === fisios.length ? '✓' : ''}</span>
                 <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', flex: 1 }}>Todos</span>
                 <span className="cal-count">{citas.length}</span>
@@ -181,7 +181,7 @@ export default function Calendario() {
                 const n = citas.filter(c => c.user_id === f.id).length
                 return (
                   <div key={f.id} onClick={() => toggleFisio(f.id)} className="cal-fisio-row">
-                    <span className="cal-check" style={{ borderColor: f.color, background: activo ? f.color : '#fff', color: '#fff' }}>
+                    <span className="cal-check" style={{ borderColor: f.color, background: activo ? f.color : 'var(--paper)', color: '#fff' }}>
                       {activo ? '✓' : ''}
                     </span>
                     <span style={{ fontSize: 12.5, fontWeight: 500, color: activo ? 'var(--ink)' : 'var(--muted)', flex: 1 }}>

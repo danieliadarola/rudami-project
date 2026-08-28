@@ -36,7 +36,7 @@ export default function EpisodioCard({ episodio, sesiones, paciente, fisios = []
     : `/pacientes/${paciente.id}/episodio/${episodio.id}/sesion/primera`
 
   return (
-    <div style={{ background: '#fff', border: '1px solid var(--hair)', borderRadius: 14, overflow: 'hidden' }}>
+    <div style={{ background: 'var(--paper)', border: '1px solid var(--hair)', borderRadius: 14, overflow: 'hidden' }}>
 
       <div className="p-5 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer"
         onClick={() => setAbierto(!abierto)}
