@@ -35,14 +35,41 @@ Proveedor Groq, swappable. Modos: `copiloto`, `informe`/`informe_rapido`, `trans
 - **Fisio**: su propio dashboard resumido, sus pacientes (RLS), vende/añade del catálogo, sin cifras de negocio.
 
 ## Datos demo
-16 pacientes de ejemplo (`@ejemplo.rudami`) con escenarios variados; un informe de ejemplo publicado (Lucía Fernández).
+16 pacientes de ejemplo (`@ejemplo.rudami`) con escenarios variados; un informe de ejemplo publicado (Lucía Fernández). **Todos los pacientes y sesiones de la base son inventados** (confirmado 28/08/2026): no hay historia clínica real, lo que abarata mucho tocar RLS o migrar datos. Los 4 perfiles sí son personas reales (los socios).
+
+## Estado a 28/08/2026 (última sesión de trabajo)
+
+**Resuelto en esta sesión:**
+- **La IA estaba caída en producción desde el 16/08** — Groq retiró `llama-3.3-70b-versatile` (aviso del 17/06) y todo lo que dependía de IA devolvía 404: copiloto, escriba, informes, FAQ y asistente. Migrado a `openai/gpt-oss-20b` (tramo gratuito) con `reasoning_effort:'low'` **obligatorio** (sin él el razonamiento se come `max_tokens`, la respuesta llega truncada y revienta el `JSON.parse`). Desplegado y verificado.
+- **`/api/generar-informe` no pedía sesión**: era un proxy de IA abierto contra la cuota de Groq. Ahora 401 sin sesión (verificado).
+- **Escalada de privilegios en `perfiles`**: cualquier fisio podía hacer `update perfiles set rol='admin'` desde la consola del navegador y, cambiando `clinica_id`, saltar a otra clínica. Cerrado y verificado con el ataque real (`42501 permission denied`), comprobando además que un cambio legítimo sigue pasando.
+- **Fuga multiclínica** de `perfiles`/`clinicas` (ambas con `USING (true)`): acotadas a la clínica propia vía `clinica_actual()`.
+- **`/configuracion` no estaba en `RUTAS_PROTEGIDAS`**: los subpaneles respondían 200 sin sesión.
+- **Versionado del esquema arrancado** en `supabase/migrations/`.
+- Retirado el generador de imágenes (`gpt-image-1`): escribía con `fs.writeFile` en `public/`, que es de solo lectura en las funciones de Vercel, así que la URL devuelta habría dado 404 siempre.
+
+**Trampa que costó dos intentos, para no repetirla:** en PostgreSQL, `revoke update (columna)` **no puede recortar un `UPDATE` concedido a nivel de tabla**, y Supabase concede `all` por defecto. No da error: el editor SQL dice "Success" y no cambia nada. Hay que `revoke update on <tabla>` y luego `grant update (columnas seguras)`. Verificar siempre con `has_column_privilege()`, nunca fiarse del mensaje del editor.
 
 ## Pendiente / futuro
-- **Endurecer RLS** de `perfiles` y `clinicas` (fuga multiclínica) antes de un 2º cliente.
+
+**Siguiente punto (plan acordado, a falta de la clave):**
+- **El alta de fisios nunca ha funcionado.** Cinco fallos encadenados: (1) `perfiles` no tiene policy de INSERT, así que RLS bloquea el `upsert`; (2) el `upsert` escribe una columna `email` que no existe en la tabla; (3) `auth.signUp()` desde el navegador cambia la sesión del admin por la del fisio recién creado; (4) el `upsert` no comprueba el error y pinta "creado" pase lo que pase — por eso nadie se dio cuenta; (5) el admin teclea la contraseña de su compañero. Los 4 perfiles actuales se crearon a mano.
+- **Plan**: endpoint `POST /api/admin/fisios` con `service_role` que (a) verifica que quien llama es admin, (b) toma el `clinica_id` del perfil del llamante y **nunca del body**, (c) crea el usuario con `auth.admin.createUser({ email_confirm: true })` desde el servidor, (d) inserta el perfil saltando RLS a propósito, (e) muestra errores reales, (f) asigna un color libre. Así **no hace falta añadir policy de INSERT** a `perfiles`.
+- **BLOQUEADO POR**: falta `SUPABASE_SERVICE_ROLE_KEY` en `.env.local` y en Vercel. Copiarla de Settings → API Keys. **Sin el prefijo `NEXT_PUBLIC_`**: con él acabaría en el bundle del navegador y expondría toda la base saltándose la RLS.
+
+**Deuda de fondo (nada urgente, por orden de valor):**
+- Sin tests ni CI. Vercel construye directo de `main`.
+- 165 errores de ESLint (139 `no-explicit-any`, 13 `react-hooks/set-state-in-effect` — estos importan porque `reactCompiler` está activado).
+- 21 de 27 páginas son `'use client'`; datos clínicos viajando por el cliente pudiendo ir por SSR.
+- Cluster de 6 componentes muertos en `app/components/` (nadie entra desde fuera): `EpisodioCard` → `GraficaEVA`, `ListaPacientes` → `MenuPaciente`, `BotonEliminarPaciente`, `BotonEliminarCita`. Con ellos se va `recharts`. Sobran también `@react-pdf/renderer` (0 usos) y la ruta legacy `app/pacientes/[id]/sesion/`.
+- Verificar las demos en pantalla: el copiloto en vivo y el asistente están probados por API, no visualmente. Tampoco se ha revisado visualmente el modo oscuro ni `/configuracion`.
+- Miguel y Rui comparten color (`#f59e0b`) y la agenda distingue fisios por color.
+
+**Producto / futuro:**
 - **Pagos**: Stripe (+Connect) con IVA por servicio (fisio exento / pilates 21%) y VeriFactu 2027.
 - **WhatsApp automático** (API de pago) + recordatorios 24h.
 - **Sync de GIFs** de ejercicios con MuscleWiki (tier gratis, necesita API key) o ExerciseDB.
-- Limpieza (el sandbox no puede borrar archivos; hacerlo a mano): borrar `middleware.ts.disabled`; borrar la ruta legacy `app/pacientes/[id]/sesion/` (hoy es solo un redirect) y los componentes muertos de `app/components/`: `EpisodioCard.tsx`, `GraficaEVA.tsx`, `BotonEliminarPaciente.tsx`, `BotonEliminarCita.tsx`, `ListaPacientes.tsx`, `MenuPaciente.tsx` (nadie los importa; los vivos de esa carpeta son SesionCard, BotonPDF, BotonEliminarSesion y BotonCerrarEpisodio — ideal moverlos a `components/` en el futuro). Desplegar últimos commits.
+- Cuando haya SMTP configurado, pasar el alta de fisios a `inviteUserByEmail` para que el fisio se ponga su propia contraseña y el admin nunca la vea.
 
 ## Notas de despliegue
 Cambios locales → `git add -A && git commit -m "…" && git push` → Vercel construye solo. El build real corre en Vercel (el sandbox no puede). `tsc` limpio en todo el código fuente.
