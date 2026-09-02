@@ -1081,3 +1081,178 @@ body {
 
 .mi-salir { display: inline-block; margin-top: 38px; font-size: 12.5px; color: var(--faint); text-decoration: none; border-bottom: 1px solid var(--hair); }
 .mi-salir:hover { color: var(--muted); }
+
+/* ============================================================
+   SESIÓN GUIADA (Fase 2) — "una cosa cada vez"
+   Pantalla completa sobre el blanco editorial de v3. Todo lo que no
+   sea el ejercicio de ahora desaparece: una línea de progreso dorada,
+   la media, el nombre y una sola acción a la altura del pulgar.
+   ============================================================ */
+
+.sg {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; flex-direction: column;
+  background: var(--paper); color: var(--ink);
+  /* dvh y no vh: con la barra de Safari, vh deja el botón bajo el borde */
+  height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+           env(safe-area-inset-bottom) env(safe-area-inset-left);
+  overflow: hidden;
+}
+.sg:focus { outline: none; }
+
+/* Progreso: una hairline dorada. Se escala en X para animar en el
+   compositor (transform), no reflujando el ancho. */
+.sg-barra { height: 2px; background: var(--hair-s); flex-shrink: 0; }
+.sg-barra span {
+  display: block; height: 100%; width: 100%; background: var(--gold);
+  transform-origin: left center; transition: transform .55s cubic-bezier(.22,1,.36,1);
+}
+
+.sg-top {
+  flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 18px 4px;
+}
+.sg-cerrar {
+  border: 0; background: var(--paper-2); color: var(--ink-2); cursor: pointer;
+  width: 38px; height: 38px; border-radius: 50%;
+  display: grid; place-items: center; transition: background .2s;
+}
+.sg-cerrar:hover { background: var(--hair); }
+
+/* El único adorno tipográfico de la pantalla. */
+.sg-contador { font-size: 14px; color: var(--faint); letter-spacing: .02em; }
+.sg-contador em {
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-style: italic; font-size: 25px; font-weight: 500;
+  color: var(--ink); margin-right: 2px;
+}
+
+.sg-cuerpo {
+  flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 10px 20px 24px; display: flex; flex-direction: column;
+}
+
+/* ── ejercicio ── */
+.sg-media {
+  width: 100%; aspect-ratio: 4 / 3; border-radius: 16px; overflow: hidden;
+  border: 1px solid var(--hair-s); background: var(--paper-2); flex-shrink: 0;
+}
+.sg-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sg-media-vacia { width: 100%; height: 100%; display: grid; place-items: center; color: var(--faint); }
+
+.sg-nombre {
+  font-size: 23px; font-weight: 600; letter-spacing: -.015em;
+  line-height: 1.25; margin: 20px 0 14px;
+}
+
+.sg-dosis {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(74px, 1fr)); gap: 1px;
+  background: var(--hair-s); border: 1px solid var(--hair-s); border-radius: 12px; overflow: hidden;
+}
+.sg-dosis > div { background: var(--paper); padding: 11px 12px; }
+.sg-dosis .l { font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.sg-dosis .v { font-size: 16px; font-weight: 600; color: var(--ink); margin-top: 4px; }
+
+.sg-nota {
+  margin-top: 14px; border-radius: 11px; padding: 11px 13px;
+  background: var(--gold-bg); border: 1px solid var(--gold-l);
+  font-size: 13.5px; line-height: 1.55; color: var(--ink);
+}
+.sg-nota strong { color: var(--gold-d); }
+
+.sg-detalle-btn {
+  margin-top: 16px; align-self: flex-start; border: 0; background: none; padding: 4px 0;
+  font: inherit; font-size: 13.5px; font-weight: 600; color: var(--accent); cursor: pointer;
+}
+.sg-detalle { margin-top: 12px; border-top: 1px solid var(--hair-s); padding-top: 14px; }
+.sg-detalle-p { font-size: 14px; line-height: 1.6; color: var(--ink-2); margin-bottom: 9px; }
+.sg-detalle-p.fuerte { color: var(--ink); font-weight: 500; }
+.sg-aviso { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin-top: 6px; }
+.sg-aviso span { font-weight: 700; margin-right: 7px; }
+.sg-aviso .mal { color: var(--danger); }
+.sg-aviso .bien { color: var(--ok); }
+.sg-sensacion {
+  margin-top: 11px; background: var(--paper-2); border-radius: 9px; padding: 9px 11px;
+  font-size: 12.5px; color: var(--muted); line-height: 1.5;
+}
+.sg-mapa { margin-top: 16px; }
+.sg-mapa-t { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 8px; }
+.sg-video { display: inline-block; margin-top: 14px; font-size: 13px; font-weight: 600; color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--hair); }
+
+/* ── descanso y fin ── */
+.sg-descanso, .sg-fin { align-items: center; justify-content: center; text-align: center; }
+
+.sg-cuenta { position: relative; display: inline-grid; place-items: center; }
+.sg-cuenta svg { transform: rotate(-90deg); }
+.sg-cuenta-bg { fill: none; stroke: var(--hair-s); stroke-width: 6; }
+.sg-cuenta-fg {
+  fill: none; stroke: var(--gold); stroke-width: 6; stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear;
+}
+.sg-cuenta-num {
+  position: absolute; font-size: 30px; font-weight: 600; color: var(--ink);
+  font-variant-numeric: tabular-nums;   /* el número no baila al descontar */
+}
+
+.sg-descanso-t { font-size: 20px; font-weight: 600; margin-top: 26px; }
+.sg-descanso-d { font-size: 14px; color: var(--muted); margin-top: 7px; line-height: 1.55; max-width: 27ch; }
+.sg-descanso .sg-secundario { margin-top: 24px; }
+
+.sg-fin-t { font-size: 27px; font-weight: 600; letter-spacing: -.02em; margin-top: 28px; }
+.sg-fin-t em { font-family: var(--font-newsreader), Georgia, serif; font-style: italic; font-weight: 500; color: var(--gold-d); }
+.sg-fin-d { font-size: 14.5px; color: var(--muted); margin-top: 10px; line-height: 1.6; max-width: 32ch; }
+.sg-fin .sg-principal { margin-top: 30px; max-width: 260px; }
+
+/* ── acciones ── */
+.sg-pie {
+  flex-shrink: 0; padding: 12px 20px calc(14px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--hair-s); background: var(--paper);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.sg-principal {
+  width: 100%; min-height: 52px; border: 0; border-radius: 13px; cursor: pointer;
+  background: var(--ink); color: var(--paper);
+  font: inherit; font-size: 16px; font-weight: 600;
+  transition: opacity .2s, transform .12s;
+}
+.sg-principal:active:not(:disabled) { transform: scale(.985); }
+.sg-principal:disabled { opacity: .45; cursor: default; }
+:root[data-theme="dark"] .sg-principal { color: var(--background); }
+
+.sg-secundario {
+  border: 0; background: none; padding: 11px; cursor: pointer;
+  font: inherit; font-size: 13.5px; font-weight: 500; color: var(--muted);
+}
+.sg-secundario:hover { color: var(--ink-2); }
+
+/* Pantallas grandes: la sesión no se estira, se centra en una columna
+   de lectura. Un ejercicio a 1400px de ancho no lo quiere nadie. */
+@media (min-width: 620px) {
+  .sg-cuerpo, .sg-pie, .sg-top { width: 100%; max-width: 520px; margin: 0 auto; }
+  .sg-media { aspect-ratio: 16 / 10; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sg-barra span, .sg-cuenta-fg { transition: none; }
+}
+
+/* Acción principal de la guía: empezar la sesión. Sólida y ancha, no un
+   enlace tímido — es lo que el paciente viene a hacer. */
+.guia-empezar {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; min-height: 52px; margin-bottom: 14px;
+  border: 0; border-radius: 13px; cursor: pointer;
+  background: var(--ink); color: var(--paper);
+  font: inherit; font-size: 15.5px; font-weight: 600;
+  transition: opacity .2s, transform .12s;
+}
+.guia-empezar:hover { opacity: .9; }
+.guia-empezar:active { transform: scale(.99); }
+.guia-empezar-ico {
+  width: 25px; height: 25px; border-radius: 50%; flex-shrink: 0;
+  display: grid; place-items: center;
+  background: var(--gold); color: #fff;
+}
+:root[data-theme="dark"] .guia-empezar { color: var(--background); }
+:root[data-theme="dark"] .guia-empezar-ico { color: var(--background); }

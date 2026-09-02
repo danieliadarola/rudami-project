@@ -101,8 +101,32 @@ Ojo: el asistente gasta **hasta 5 llamadas por mensaje** (bucle de function-call
   2-4 correos/hora y solo a direcciones del equipo — vale para desarrollar y para
   una demo controlada, pero hay que pasar a **Resend** antes de que se registren
   pacientes reales.
-- **Fase 2 — La experiencia.** Sesión guiada paso a paso (el salto conceptual
-  robado a openGym: de *lista* a *sesión*), scroll triggers, `motion`, imágenes.
+- **Fase 2 — La experiencia.** 🚧 En curso.
+  - ✅ **Sesión guiada** (`components/paciente/SesionGuiada.tsx`), accesible desde
+    `/r/[token]` — a propósito: llega al enlace que ya se usa en demos, sin
+    esperar a que nadie se registre.
+  - ⏳ Pendiente: scroll triggers y secciones `sticky` en la guía, portada de
+    `/mi` con diseño real, ilustraciones SVG de los 8 ejercicios sin foto.
+  - ⚠️ **Sin verificación visual**: la extensión de Chrome no estaba conectada.
+    Comprobado estructuralmente (botón, CSS servido, chunk aparte), no en pantalla.
+
+  **Decisiones de la sesión guiada:**
+  - *"Una cosa cada vez"*: desaparece todo menos el ejercicio de ahora. Una
+    hairline dorada de progreso, la media, el nombre y **una** acción a la
+    altura del pulgar. El único adorno es el contador en Newsreader itálica,
+    que convierte la pantalla en ritual y no en formulario.
+  - **Wake lock**: la pantalla no se apaga mientras dura la sesión, y se libera
+    al salir. Sin esto el móvil se bloquea entre series y hay que buscar dónde
+    ibas cada dos minutos.
+  - **Descanso por reloj, no por ticks**: se cuenta contra un instante futuro
+    porque el móvil ralentiza los temporizadores en segundo plano y contando
+    ticks el descanso se alargaría solo.
+  - **`next/dynamic` con `ssr:false`**: es la única pantalla que usa `motion`, y
+    con un import normal viajaría en el bundle de la guía aunque nadie la abra.
+    Verificado: `motion` **no** aparece en los 13 scripts iniciales.
+  - `segundosDeDescanso()` se queda con el primer número de un rango (el extremo
+    corto) y devuelve null si no reconoce nada: mejor sin cronómetro que con uno
+    inventado.
 - **Fase 3 — Progreso y evolución.** Historial por episodios, heatmap.
 - **Fase 4 — Citas, bonos y comunicación.** Alcance decidido (ver tabla arriba):
   citas con solicitud de cambio, bono sin precios, WhatsApp + avisos.

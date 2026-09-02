@@ -7,6 +7,7 @@
 // Escrituras SOLO vía RPCs seguras por token (sin login).
 
 import { useMemo, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { supabase } from '@/app/lib/supabase'
 import { MapaMuscular } from '@/components/guia/MapaMuscular'
 import { normalizarMusculos, nombresDeGrupos } from '@/app/lib/musculos'
@@ -18,6 +19,17 @@ import { evaColor, youtubeId, iniciales } from '@/app/lib/paciente/formato'
 import { Anillo } from '@/components/paciente/Anillo'
 import { SparkDolor } from '@/components/paciente/SparkDolor'
 import { SemanaChecks } from '@/components/paciente/SemanaChecks'
+import type { EjercicioGuia } from '@/app/lib/paciente/tipos'
+
+// La sesión guiada se carga aparte, bajo demanda. Es la única pantalla que usa
+// `motion`, y un import normal la meteria en el bundle de la guía aunque el
+// paciente no la abra nunca: esta página se abre desde un enlace de WhatsApp
+// con 4G y su LCP es tan argumento comercial como la propia animación.
+// ssr:false porque necesita wake lock, teclado y medidas del navegador.
+const SesionGuiada = dynamic(
+  () => import('@/components/paciente/SesionGuiada').then(m => m.SesionGuiada),
+  { ssr: false },
+)
 
 /* ───────────────────────── piezas visuales ───────────────────────── */
 
@@ -62,6 +74,7 @@ export function GuiaPaciente({
   const [checkinOk, setCheckinOk] = useState<boolean>(() => Boolean(data.checkins?.find((c: any) => c.fecha === hoy)))
   const [guardandoCheckin, setGuardandoCheckin] = useState(false)
   const [videoAbierto, setVideoAbierto] = useState<Record<string, boolean>>({})
+  const [sesionAbierta, setSesionAbierta] = useState(false)
 
   /* chat */
   const [chatAbierto, setChatAbierto] = useState(false)
@@ -115,6 +128,22 @@ export function GuiaPaciente({
       if (error || !r?.ok) throw new Error()
     } catch {
       setChecks(prev => { const s = new Set(prev); hecho ? s.delete(k) : s.add(k); return s }) // revert
+    }
+  }
+
+  /** Igual que marcar() pero solo en un sentido y diciendo si salió bien: la
+   *  sesión guiada necesita saberlo para no avanzar sobre un fallo de red. */
+  const marcarHecho = async (e: EjercicioGuia): Promise<boolean> => {
+    const k = `${e.id}|${hoy}`
+    if (checks.has(k)) return true
+    setChecks(prev => new Set(prev).add(k))
+    try {
+      const { data: r, error } = await supabase.rpc('guia_marcar_ejercicio', { p_token: token, p_ejercicio_id: e.id, p_hecho: true })
+      if (error || !r?.ok) throw new Error()
+      return true
+    } catch {
+      setChecks(prev => { const s = new Set(prev); s.delete(k); return s })
+      return false
     }
   }
 
@@ -231,6 +260,18 @@ export function GuiaPaciente({
               <div className="rep-status-map" aria-hidden="true"><MapaMuscular activos={gruposTotales} modo="mini" alto={92} /></div>
             )}
           </div>
+        )}
+
+        {/* La acción principal de la pantalla. Va aquí arriba, justo bajo el
+            anillo, porque es lo que el paciente viene a hacer: no a leer un
+            informe, a hacer sus ejercicios de hoy. */}
+        {ejs.length > 0 && !completoHoy && (
+          <button className="guia-empezar guia-no-print" onClick={() => setSesionAbierta(true)}>
+            <span className="guia-empezar-ico" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5-11-6.5Z" /></svg>
+            </span>
+            {hechosHoy === 0 ? 'Empezar mi sesión de hoy' : `Continuar — ${ejs.length - hechosHoy} por hacer`}
+          </button>
         )}
 
         {/* Puente a la app: convierte al paciente de "enlace" en "cuenta".
@@ -491,6 +532,19 @@ export function GuiaPaciente({
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>
         ¿Dudas?
       </button>
+
+      {/* Sesión guiada: se descarga al abrirla (ver el dynamic() de arriba),
+          así su coste —motion incluido— no lo paga quien solo viene a leer. */}
+      {sesionAbierta && (
+        <SesionGuiada
+          ejercicios={ejs as EjercicioGuia[]}
+          hechosHoy={new Set(ejs.filter(e => checks.has(`${e.id}|${hoy}`)).map(e => e.id))}
+          onMarcar={marcarHecho}
+          onCerrar={() => setSesionAbierta(false)}
+          fisio={fis?.nombre}
+          faq={faqEj}
+        />
+      )}
 
       {chatAbierto && (
         <>

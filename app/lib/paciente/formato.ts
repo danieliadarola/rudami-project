@@ -39,3 +39,39 @@ export function dosisCorta(e: { series?: number | null; repeticiones?: string | 
     .filter(Boolean)
     .join(' • ')
 }
+
+/**
+ * Segundos de descanso a partir del texto libre que escribe el fisio
+ * ("30 s", "45 segundos", "1 min", "1-2 minutos", "entre 60 y 90 s").
+ *
+ * Se queda con el PRIMER número, que en un rango es el extremo corto: si el
+ * fisio dice "1-2 minutos", cronometrar 2 minutos dejaría al paciente parado
+ * de más y es más fácil alargar a mano que recortar.
+ *
+ * Devuelve null si no hay nada reconocible, y en ese caso la sesión guiada
+ * simplemente no cronometra: mejor sin temporizador que con uno inventado.
+ */
+export function segundosDeDescanso(texto?: string | null): number | null {
+  if (!texto) return null
+  const t = texto.toLowerCase()
+  const m = t.match(/(\d+(?:[.,]\d+)?)/)
+  if (!m) return null
+
+  const n = parseFloat(m[1].replace(',', '.'))
+  if (!Number.isFinite(n) || n <= 0) return null
+
+  // "min"/"minuto(s)" → minutos. Todo lo demás se asume en segundos.
+  const enMinutos = /\bmin/.test(t)
+  const seg = Math.round(enMinutos ? n * 60 : n)
+
+  // Cotas de cordura: un descanso de 0 s no es descanso y uno de 10 minutos
+  // dentro de una sesión guiada es casi seguro un dato mal escrito.
+  if (seg < 5 || seg > 600) return null
+  return seg
+}
+
+/** "1:30" a partir de segundos. */
+export function reloj(segundos: number): string {
+  const s = Math.max(0, Math.round(segundos))
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
