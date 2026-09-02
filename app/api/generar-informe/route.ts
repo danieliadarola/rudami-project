@@ -43,6 +43,15 @@ export async function POST(request: Request) {
     }
 
     const resultado = await generarInforme(modo, datos)
+
+    // Contabiliza la llamada contra el tramo gratuito de Groq (1.000/día).
+    // Va DESPUÉS de la llamada pero fuera de su suerte: si el registro falla,
+    // la respuesta clínica sale igual. Un contador nunca rompe una petición.
+    supabase.rpc('uso_ia_registrar', { p_modo: modo }).then(
+      () => {},
+      (e: unknown) => console.warn('uso_ia_registrar falló:', e),
+    )
+
     return NextResponse.json(resultado)
   } catch (error) {
     // Cuota por minuto agotada: la UI lo trata como espera, no como fallo.

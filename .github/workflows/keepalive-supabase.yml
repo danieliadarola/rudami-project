@@ -1,0 +1,46 @@
+name: Mantener despierta la base de datos
+
+# POR QUÉ EXISTE ESTO
+# El plan gratuito de Supabase PAUSA el proyecto tras ~7 días sin actividad.
+# Reactivarlo es manual y tarda minutos. El escenario que evita este workflow es
+# concreto: llegar a una clínica a enseñar la demo y encontrarse la base dormida.
+#
+# Una consulta al día basta. Cuando el proyecto pase a plan de pago esto sobra,
+# pero tampoco estorba.
+
+on:
+  schedule:
+    # 07:14 UTC. Hora "rara" a propósito: los minutos en punto son cuando
+    # GitHub tiene más cola y más retrasa las ejecuciones programadas.
+    - cron: '14 7 * * *'
+  workflow_dispatch:        # para poder lanzarlo a mano antes de una demo
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consultar la base
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "Faltan los secretos SUPABASE_URL / SUPABASE_ANON_KEY."
+            exit 1
+          fi
+          # RPC pública que sí toca Postgres de verdad. Con un token inventado
+          # devuelve null: no lee ningún dato, pero despierta la base.
+          codigo=$(curl -s -o /tmp/salida -w '%{http_code}' \
+            -X POST "$SUPABASE_URL/rest/v1/rpc/informe_publico" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"p_token":"keepalive-no-existe"}')
+          echo "HTTP $codigo"
+          cat /tmp/salida
+          # 200 con cuerpo "null" es exactamente lo que se espera.
+          if [ "$codigo" != "200" ]; then
+            echo "::error::La base no respondió 200. Puede estar pausada o caída."
+            exit 1
+          fi

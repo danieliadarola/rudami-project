@@ -81,6 +81,13 @@ export async function POST(request: Request) {
         messages, tools: TOOLS as any, tool_choice: 'auto', temperature: 0.2, max_tokens: 900,
         reasoning_effort: 'low',
       })
+      // Cada vuelta del bucle es una llamada real a Groq: un solo mensaje del
+      // fisio puede gastar hasta 5. Se cuenta aquí, no fuera, o el consumo
+      // del asistente saldría hasta 5 veces menor de lo que es.
+      supabase.rpc('uso_ia_registrar', { p_modo: 'asistente' }).then(
+        () => {},
+        (e: unknown) => console.warn('uso_ia_registrar falló:', e),
+      )
       const msg = completion.choices[0]?.message
       if (!msg) break
       const calls = msg.tool_calls ?? []

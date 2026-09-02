@@ -45,6 +45,16 @@ input::placeholder, textarea::placeholder {
   --ok:      #10b981;
   --warn:    #d97706;
   --danger:  #dc2626;
+
+  /* Capa "gold": el registro motivacional del paciente (racha, plan completado,
+     nota del fisio). Es el único sitio donde v3 se permite color cálido, y por
+     eso va apagado — bronce editorial, no amarillo de gamificación.
+     Se usaban desde el principio en 9 sitios pero nunca llegaron a definirse:
+     el anillo salía negro y las píldoras sin fondo (detectado el 02/09/2026). */
+  --gold:    #c8952a;   /* trazos y bordes: el arco del anillo */
+  --gold-d:  #8a6414;   /* texto sobre fondo claro (contraste AA sobre --gold-bg) */
+  --gold-bg: #fdf8ec;   /* tinte de fondo */
+  --gold-l:  #ecdcb6;   /* borde suave */
 }
 
 /* ── Modo nocturno ──────────────────────────────────────────────
@@ -64,6 +74,12 @@ input::placeholder, textarea::placeholder {
   --hair:    rgba(255, 255, 255, 0.12);
   --hair-s:  rgba(255, 255, 255, 0.07);
   --accent:  #60a5fa;
+  /* En oscuro el dorado se aclara (sobre fondo oscuro hace falta luminancia
+     alta para leerse) y los fondos pasan a velos translúcidos. */
+  --gold:    #d9a94a;
+  --gold-d:  #e8c37a;
+  --gold-bg: rgba(217, 169, 74, 0.10);
+  --gold-l:  rgba(217, 169, 74, 0.28);
 }
 :root[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #363c48; }
 /* Elementos sólidos (fondo = --ink): en oscuro el fondo se aclara, así que
@@ -946,3 +962,122 @@ body {
 .switch.on { background: var(--accent); }
 .switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .18s; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
 .switch.on::after { transform: translateX(18px); }
+
+/* ============================================================
+   APP DEL PACIENTE (/mi) — Fase 1A
+   Estructura y tokens del sistema v3. El lenguaje visual definitivo
+   (animaciones, sesión guiada, imágenes) llega en la Fase 2.
+   Mobile-first de verdad: el paciente entra desde el móvil.
+   ============================================================ */
+
+.mi-shell {
+  min-height: 100dvh;               /* dvh y no vh: la barra de Safari se mueve */
+  background: var(--paper);
+  color: var(--ink);
+  /* Respeta la muesca y la barra de gestos al correr como app instalada */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+           env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.mi-portada,
+.mi-vacio { max-width: 640px; margin: 0 auto; padding: 26px 20px 56px; }
+
+.mi-vacio { min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; text-align: center; }
+.mi-vacio h1 { font-size: 20px; font-weight: 600; line-height: 1.35; margin: 14px 0 10px; color: var(--ink); }
+
+.mi-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 30px; }
+.mi-wordmark { font-weight: 700; font-size: 13px; letter-spacing: .14em; color: var(--ink); }
+.mi-clinica { font-size: 12px; color: var(--muted); }
+
+.mi-saludo { font-size: 27px; font-weight: 600; letter-spacing: -.015em; color: var(--ink); margin-bottom: 24px; }
+.mi-saludo em { font-family: var(--font-newsreader), Georgia, serif; font-style: italic; font-weight: 500; }
+
+.mi-hoy {
+  display: flex; align-items: center; gap: 18px;
+  border: 1px solid var(--hair); border-radius: 16px; padding: 18px 20px; background: var(--paper);
+}
+.mi-hoy-t { font-size: 15px; font-weight: 600; color: var(--ink); }
+.mi-hoy-d { font-size: 13.5px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+
+.mi-cita {
+  display: flex; align-items: center; gap: 13px; margin-top: 14px;
+  border: 1px solid var(--hair-s); border-radius: 14px; padding: 15px 18px; background: var(--paper-2);
+}
+.mi-cita-punto { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.mi-cita-t { font-size: 10.5px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--faint); }
+.mi-cita-d { font-size: 14px; color: var(--ink-2); margin-top: 3px; line-height: 1.45; }
+.mi-cita-d::first-letter { text-transform: uppercase; }   /* "lunes" → "Lunes" */
+
+.mi-nota { font-size: 14px; color: var(--muted); line-height: 1.6; margin-top: 16px; }
+.mi-nota-suave { color: var(--faint); font-size: 13px; }
+.mi-nota a { color: var(--accent); font-weight: 600; text-decoration: none; }
+
+/* La Fase 2 traerá scroll-trigger y transiciones; el interruptor global va
+   desde ya para no tener que acordarse luego. */
+@media (prefers-reduced-motion: reduce) {
+  .mi-shell *, .mi-shell *::before, .mi-shell *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Fase 1B: puerta del paciente y puente desde la guía ────────────── */
+
+/* Puente /r/[token] → app. Cinta discreta, no un banner agresivo: aparece
+   después de que el paciente ya ha visto su plan. */
+.guia-cuenta {
+  display: flex; align-items: center; gap: 14px; width: 100%;
+  border: 1px solid var(--gold-l); background: var(--gold-bg);
+  border-radius: 14px; padding: 15px 18px; margin-bottom: 14px;
+  text-decoration: none; color: var(--ink); transition: border-color .2s, transform .2s;
+}
+.guia-cuenta:hover { border-color: var(--gold); }
+.guia-cuenta:active { transform: scale(.995); }
+.guia-cuenta-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.guia-cuenta-txt strong { font-size: 14.5px; font-weight: 700; color: var(--gold-d); }
+.guia-cuenta-txt span { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.guia-cuenta svg { flex-shrink: 0; color: var(--faint); }
+
+/* Formulario de acceso */
+.mi-entrar-form { display: flex; flex-direction: column; margin-top: 26px; text-align: left; }
+.mi-entrar-label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin-bottom: 8px; }
+
+.mi-input {
+  width: 100%; border: 1px solid var(--hair); border-radius: 11px;
+  padding: 13px 15px; background: var(--paper); color: var(--ink);
+  /* 16px o más: por debajo de eso Safari en iOS hace zoom al enfocar y
+     descoloca la pantalla entera. */
+  font-size: 16px;
+  transition: border-color .2s;
+}
+.mi-input:focus { outline: none; border-color: var(--accent); }
+.mi-input:disabled { opacity: .55; }
+
+.mi-btn {
+  margin-top: 18px; border: 0; border-radius: 11px; cursor: pointer;
+  background: var(--ink); color: var(--paper);
+  /* 48px de alto: objetivo táctil cómodo, y este es el botón de la app que
+     más se pulsa con una mano y con dolor. */
+  min-height: 48px; padding: 0 20px;
+  font-size: 15px; font-weight: 600; font-family: inherit;
+  transition: opacity .2s;
+}
+.mi-btn:hover:not(:disabled) { opacity: .88; }
+.mi-btn:disabled { opacity: .4; cursor: default; }
+:root[data-theme="dark"] .mi-btn { color: var(--background); }
+
+.mi-link { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); font-weight: 600; cursor: pointer; text-decoration: underline; }
+
+.mi-error {
+  margin-top: 16px; border-radius: 10px; padding: 11px 13px;
+  background: rgba(220, 38, 38, .07); border: 1px solid rgba(220, 38, 38, .22);
+  color: #dc2626; font-size: 13px; line-height: 1.5; text-align: left;
+}
+
+.mi-entrar-ok { margin-top: 26px; }
+.mi-entrar-t { font-size: 17px; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
+
+.mi-salir { display: inline-block; margin-top: 38px; font-size: 12.5px; color: var(--faint); text-decoration: none; border-bottom: 1px solid var(--hair); }
+.mi-salir:hover { color: var(--muted); }

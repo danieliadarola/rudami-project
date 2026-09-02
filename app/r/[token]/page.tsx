@@ -11,7 +11,14 @@ export const revalidate = 0
 export default async function ReportePublico({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
   const supabase = await createClient()
-  const { data } = await supabase.rpc('informe_publico', { p_token: token })
+
+  const [{ data }, { data: { user } }] = await Promise.all([
+    supabase.rpc('informe_publico', { p_token: token }),
+    // Solo para decidir el texto del enlace a la app: quien ya tiene sesión no
+    // necesita que le ofrezcamos crear una cuenta. No condiciona nada de lo que
+    // se muestra del plan, que sigue saliendo del token.
+    supabase.auth.getUser(),
+  ])
 
   if (!data || !data.informe) {
     return (
@@ -24,5 +31,5 @@ export default async function ReportePublico({ params }: { params: Promise<{ tok
     )
   }
 
-  return <GuiaPaciente data={data} token={token} />
+  return <GuiaPaciente data={data} token={token} sesionIniciada={Boolean(user)} />
 }

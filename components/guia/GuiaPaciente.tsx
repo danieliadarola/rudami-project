@@ -10,45 +10,19 @@ import { useMemo, useRef, useState } from 'react'
 import { supabase } from '@/app/lib/supabase'
 import { MapaMuscular } from '@/components/guia/MapaMuscular'
 import { normalizarMusculos, nombresDeGrupos } from '@/app/lib/musculos'
-
-/* ───────────────────────── helpers de fecha ───────────────────────── */
-
-const DIA_MS = 86400000
-const iso = (d: Date) => {
-  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), dd = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${dd}`
-}
-const desdeIso = (s: string) => new Date(s + 'T12:00:00')
-const DIAS_CORTOS = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
-
-function youtubeId(url?: string): string | null {
-  if (!url) return null
-  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/)
-  return m ? m[1] : null
-}
-
-const ini = (n?: string, a?: string) => `${(n ?? '')[0] ?? ''}${(a ?? '')[0] ?? ''}`.toUpperCase()
-const evaColor = (v: number) => v <= 3 ? '#16a34a' : v <= 6 ? '#d97706' : '#dc2626'
+// Piezas compartidas con la app del paciente (/mi). Un solo sitio donde se
+// decide cómo se cuenta una racha o de qué color va un dolor: la guía por
+// enlace y la app con sesión no pueden dar números distintos.
+import { iso, checksPorFecha as agruparChecks, calcularRacha, semanaDe, fechaLarga } from '@/app/lib/paciente/fechas'
+import { evaColor, youtubeId, iniciales } from '@/app/lib/paciente/formato'
+import { Anillo } from '@/components/paciente/Anillo'
+import { SparkDolor } from '@/components/paciente/SparkDolor'
+import { SemanaChecks } from '@/components/paciente/SemanaChecks'
 
 /* ───────────────────────── piezas visuales ───────────────────────── */
 
 function Seccion({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="rep-card"><div className="rep-label">{label}</div>{children}</div>
-}
-
-function Anillo({ pct, hechos, total }: { pct: number; hechos: number; total: number }) {
-  const R = 39, C = 2 * Math.PI * R
-  return (
-    <div className="guia-ring" role="img" aria-label={`${hechos} de ${total} ejercicios completados hoy`}>
-      <svg width="92" height="92" viewBox="0 0 92 92">
-        <circle className="bg" cx="46" cy="46" r={R} />
-        <circle className="fg" cx="46" cy="46" r={R} strokeDasharray={C} strokeDashoffset={C * (1 - pct)} />
-      </svg>
-      <div className="guia-ring-num">
-        <div style={{ textAlign: 'center' }}>{hechos}<span style={{ color: 'var(--faint)', fontWeight: 500 }}>/{total}</span><br /><small>hoy</small></div>
-      </div>
-    </div>
-  )
 }
 
 function IconCheck() {
@@ -60,27 +34,19 @@ const IconMov = () => (
   </svg>
 )
 
-/** Sparkline SVG puro del dolor reportado (sin librerías: la página pública debe volar). */
-function SparkDolor({ puntos }: { puntos: { fecha: string; dolor: number }[] }) {
-  if (puntos.length < 2) return null
-  const W = 560, H = 56, PAD = 6
-  const t0 = desdeIso(puntos[0].fecha).getTime(), t1 = desdeIso(puntos[puntos.length - 1].fecha).getTime()
-  const x = (f: string) => t1 === t0 ? PAD : PAD + ((desdeIso(f).getTime() - t0) / (t1 - t0)) * (W - PAD * 2)
-  const y = (v: number) => PAD + (1 - v / 10) * (H - PAD * 2)
-  const d = puntos.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(p.fecha).toFixed(1)},${y(p.dolor).toFixed(1)}`).join(' ')
-  const ult = puntos[puntos.length - 1]
-  return (
-    <svg className="guia-spark" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
-      <path d={d} fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      {puntos.map(p => <circle key={p.fecha} cx={x(p.fecha)} cy={y(p.dolor)} r="3" fill="#fff" stroke="var(--ink)" strokeWidth="1.6" />)}
-      <circle cx={x(ult.fecha)} cy={y(ult.dolor)} r="4" fill={evaColor(ult.dolor)} />
-    </svg>
-  )
-}
-
 /* ───────────────────────── componente principal ───────────────────────── */
 
-export function GuiaPaciente({ data, token }: { data: any; token: string }) {
+export function GuiaPaciente({
+  data,
+  token,
+  sesionIniciada = false,
+}: {
+  data: any
+  token: string
+  /** Lo resuelve el servidor en /r/[token]: cambia el texto del puente a la app
+   *  para no ofrecer "crea tu cuenta" a quien ya la tiene. */
+  sesionIniciada?: boolean
+}) {
   const i = data.informe, pac = data.paciente, fis = data.fisio, cli = data.clinica
   const ejs: any[] = data.ejercicios ?? []
   const met = i.metricas ?? {}
@@ -109,29 +75,9 @@ export function GuiaPaciente({ data, token }: { data: any; token: string }) {
   const pctHoy = ejs.length ? hechosHoy / ejs.length : 0
   const completoHoy = ejs.length > 0 && hechosHoy === ejs.length
 
-  const checksPorFecha = useMemo(() => {
-    const m = new Map<string, number>()
-    checks.forEach(k => { const f = k.split('|')[1]; m.set(f, (m.get(f) ?? 0) + 1) })
-    return m
-  }, [checks])
-
-  const racha = useMemo(() => {
-    let n = 0
-    let d = desdeIso(hoy)
-    if (!checksPorFecha.get(hoy)) d = new Date(d.getTime() - DIA_MS) // hoy aún no cuenta en contra
-    while (checksPorFecha.get(iso(d))) { n++; d = new Date(d.getTime() - DIA_MS) }
-    return n
-  }, [checksPorFecha, hoy])
-
-  const semana = useMemo(() => {
-    const h = desdeIso(hoy)
-    const lunes = new Date(h.getTime() - ((h.getDay() + 6) % 7) * DIA_MS)
-    return Array.from({ length: 7 }, (_, idx) => {
-      const d = new Date(lunes.getTime() + idx * DIA_MS)
-      const f = iso(d)
-      return { f, letra: DIAS_CORTOS[idx], n: checksPorFecha.get(f) ?? 0, esHoy: f === hoy, futuro: d.getTime() > h.getTime() }
-    })
-  }, [checksPorFecha, hoy])
+  const porFecha = useMemo(() => agruparChecks(checks), [checks])
+  const racha = useMemo(() => calcularRacha(porFecha, hoy), [porFecha, hoy])
+  const semana = useMemo(() => semanaDe(porFecha, hoy), [porFecha, hoy])
 
   const serieDolor = useMemo(() => {
     const base: { fecha: string; dolor: number }[] = []
@@ -147,7 +93,7 @@ export function GuiaPaciente({ data, token }: { data: any; token: string }) {
     return m
   }, [faq])
 
-  const fecha = new Date((i.fecha || '') + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+  const fecha = fechaLarga(i.fecha)
   const di = met.dolor_ini ?? 0, df = met.dolor_fin ?? 0, mejora = di - df
   const otras: [string, number][] = ([['Movilidad', met.movilidad], ['Fuerza', met.fuerza], ['Rigidez', met.rigidez], ['Fatiga', met.fatiga], ['Sueño', met.sueno], ['Adherencia', met.adherencia]] as any).filter(([, v]: any) => v != null)
 
@@ -245,7 +191,7 @@ export function GuiaPaciente({ data, token }: { data: any; token: string }) {
 
         {/* Tarjeta del paciente */}
         <div className="rep-card" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <span className="rep-avatar">{ini(pac?.nombre, pac?.apellidos)}</span>
+          <span className="rep-avatar">{iniciales(pac?.nombre, pac?.apellidos)}</span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>{pac?.nombre} {pac?.apellidos}</div>
             {fis?.nombre && <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 3 }}>Tu fisioterapeuta: {fis.nombre} {fis.apellidos}</div>}
@@ -286,6 +232,21 @@ export function GuiaPaciente({ data, token }: { data: any; token: string }) {
             )}
           </div>
         )}
+
+        {/* Puente a la app: convierte al paciente de "enlace" en "cuenta".
+            Es la única conversión que pedimos, y va después de que ya haya
+            visto su plan — no antes, para no poner un muro en la puerta. */}
+        <a className="guia-cuenta guia-no-print" href={sesionIniciada ? '/mi' : `/mi/entrar?t=${encodeURIComponent(token)}`}>
+          <span className="guia-cuenta-txt">
+            <strong>{sesionIniciada ? 'Ir a mi recuperación' : 'Guarda tu progreso'}</strong>
+            <span>
+              {sesionIniciada
+                ? 'Tu seguimiento completo, con todos tus episodios.'
+                : 'Crea tu acceso y no perderás tus marcas ni tu racha aunque cambies de móvil.'}
+            </span>
+          </span>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+        </a>
 
         {/* Check-in diario */}
         <div className="rep-card guia-no-print">
@@ -434,16 +395,7 @@ export function GuiaPaciente({ data, token }: { data: any; token: string }) {
           <Seccion label="Tu evolución">
             {ejs.length > 0 && (
               <>
-                <div className="guia-sem" role="list" aria-label="Ejercicios completados esta semana">
-                  {semana.map(d => (
-                    <div key={d.f} className="guia-sem-dia" role="listitem">
-                      <div className="d">{d.letra}</div>
-                      <div className={`guia-sem-dot${d.n >= ejs.length && ejs.length > 0 ? ' full' : d.n > 0 ? ' parcial' : ''}${d.esHoy ? ' hoy' : ''}`}>
-                        {d.n > 0 ? d.n : ''}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <SemanaChecks semana={semana} totalDia={ejs.length} />
                 <p style={{ fontSize: 12, color: 'var(--faint)', marginTop: 10 }}>Cada círculo muestra los ejercicios completados ese día.</p>
               </>
             )}

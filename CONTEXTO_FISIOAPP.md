@@ -37,9 +37,45 @@ Proveedor Groq, swappable. Modos: `copiloto`, `informe`/`informe_rapido`, `trans
 ## Datos demo
 16 pacientes de ejemplo (`@ejemplo.rudami`) con escenarios variados; un informe de ejemplo publicado (Lucía Fernández). **Todos los pacientes y sesiones de la base son inventados** (confirmado 28/08/2026): no hay historia clínica real, lo que abarata mucho tocar RLS o migrar datos. Los 4 perfiles sí son personas reales (los socios).
 
-## Estado a 28/08/2026 (última sesión de trabajo)
+## Estado a 02/09/2026 — arranca la app del paciente
 
-**Resuelto en esta sesión:**
+Línea de trabajo nueva y grande: **la app del paciente** (`/mi`), que es el
+argumento comercial frente a los Cliniko/Jane. Plan completo, decisiones y
+verificaciones en **`PLAN_APP_PACIENTE.md`**; el encargo, en `PROMPT_APP_PACIENTE.md`.
+
+Hecha la **Fase 0** (análisis) y la **Fase 1A** (fundaciones). Titulares:
+
+- **El paciente no tendrá acceso directo a ninguna tabla.** Ni una policy nueva:
+  todo por RPCs `SECURITY DEFINER` con lista blanca enumerada a mano. Medido, no
+  supuesto: un `authenticated` sin fila en `perfiles` ve **0 filas en las 15 tablas**.
+- **`informe_publico` pasa de lista negra a lista blanca.** Antes era
+  `to_jsonb(i) - 'notas_fisio'`, así que publicaba el token, los ids internos y
+  **cualquier columna que se añadiese a `informes` en el futuro**. Ahora las
+  columnas se escriben a mano en `guia_payload()`, que comparten la guía por
+  enlace y la app. Ventana de checks/check-ins: 28 → 90 días.
+- **`pacientes.auth_user_id`** es columna nueva. `user_id` **no servía**: es el
+  fisio propietario de la ficha (22/22 apuntan a un perfil).
+- **Vinculación con doble factor**: hace falta el token **y** el email de la
+  ficha. Solo con el token sería escalada (token = un informe; cuenta = todo el
+  historial). Verificado: intruso con token robado y otro email → `no_coincide`.
+- **`proxy.ts` tiene ahora dos zonas** con puertas distintas (clínica → `/`,
+  paciente → `/mi/entrar`). La cookie `rudami-rol` es **pista de enrutado, nunca
+  de autorización**: el proxy no debe consultar la base.
+- **Contador de consumo de IA** (`uso_ia`) y **límites configurables**
+  (`clinicas.limite_chat_dia`, antes cableado a 12 dentro de la RPC).
+
+**Techos del tramo gratuito, medidos el 02/09** (cabeceras `x-ratelimit` reales):
+Groq `gpt-oss-20b` da **1.000 peticiones/día** y **8.000 tokens/minuto**. Una
+clínica activa ≈ 490/día: **cabe una, dos no**. El asistente gasta **hasta 5
+llamadas por mensaje** (bucle de function-calling), que es lo que más pesa.
+
+**Dos avisos que no son de ingeniería:** Supabase Free **pausa el proyecto a los
+~7 días sin actividad** (mitigado con `.github/workflows/keepalive-supabase.yml`)
+y **Vercel Hobby prohíbe el uso comercial** — el día que firme una clínica, Pro.
+
+## Estado a 28/08/2026
+
+**Resuelto en esa sesión:**
 - **La IA estaba caída en producción desde el 16/08** — Groq retiró `llama-3.3-70b-versatile` (aviso del 17/06) y todo lo que dependía de IA devolvía 404: copiloto, escriba, informes, FAQ y asistente. Migrado a `openai/gpt-oss-20b` (tramo gratuito) con `reasoning_effort:'low'` **obligatorio** (sin él el razonamiento se come `max_tokens`, la respuesta llega truncada y revienta el `JSON.parse`). Desplegado y verificado.
 - **`/api/generar-informe` no pedía sesión**: era un proxy de IA abierto contra la cuota de Groq. Ahora 401 sin sesión (verificado).
 - **Escalada de privilegios en `perfiles`**: cualquier fisio podía hacer `update perfiles set rol='admin'` desde la consola del navegador y, cambiando `clinica_id`, saltar a otra clínica. Cerrado y verificado con el ataque real (`42501 permission denied`), comprobando además que un cambio legítimo sigue pasando.
@@ -51,6 +87,15 @@ Proveedor Groq, swappable. Modos: `copiloto`, `informe`/`informe_rapido`, `trans
 **Trampa que costó dos intentos, para no repetirla:** en PostgreSQL, `revoke update (columna)` **no puede recortar un `UPDATE` concedido a nivel de tabla**, y Supabase concede `all` por defecto. No da error: el editor SQL dice "Success" y no cambia nada. Hay que `revoke update on <tabla>` y luego `grant update (columnas seguras)`. Verificar siempre con `has_column_privilege()`, nunca fiarse del mensaje del editor.
 
 ## Pendiente / futuro
+
+**Bloqueado por credenciales (dos cosas, un solo trámite cada una):**
+- **SMTP para la Fase 1B de la app del paciente.** El remitente por defecto de
+  Supabase manda 2-3 correos/hora y solo a direcciones del equipo: no sirve ni
+  para demos. Recomendado **Resend** (3.000/mes gratis). Sin esto no hay enlace
+  mágico y `/mi/entrar` sigue siendo una pantalla informativa.
+- **Secretos del keep-alive** en GitHub → Settings → Secrets → Actions:
+  `SUPABASE_URL` y `SUPABASE_ANON_KEY` (esta es pública, ya va en el bundle).
+  Sin ellos el workflow falla y el proyecto se puede pausar antes de una demo.
 
 **Siguiente punto (plan acordado, a falta de la clave):**
 - **El alta de fisios nunca ha funcionado.** Cinco fallos encadenados: (1) `perfiles` no tiene policy de INSERT, así que RLS bloquea el `upsert`; (2) el `upsert` escribe una columna `email` que no existe en la tabla; (3) `auth.signUp()` desde el navegador cambia la sesión del admin por la del fisio recién creado; (4) el `upsert` no comprueba el error y pinta "creado" pase lo que pase — por eso nadie se dio cuenta; (5) el admin teclea la contraseña de su compañero. Los 4 perfiles actuales se crearon a mano.
