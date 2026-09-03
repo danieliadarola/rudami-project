@@ -20,6 +20,7 @@ import { Anillo } from '@/components/paciente/Anillo'
 import { SparkDolor } from '@/components/paciente/SparkDolor'
 import { SemanaChecks } from '@/components/paciente/SemanaChecks'
 import type { EjercicioGuia } from '@/app/lib/paciente/tipos'
+import { Revelar } from '@/components/paciente/Revelar'
 
 // La sesión guiada se carga aparte, bajo demanda. Es la única pantalla que usa
 // `motion`, y un import normal la meteria en el bundle de la guía aunque el
@@ -33,8 +34,11 @@ const SesionGuiada = dynamic(
 
 /* ───────────────────────── piezas visuales ───────────────────────── */
 
+// Cada sección aparece al entrar en pantalla (Revelar, 0 KB). Los bloques de
+// arriba del pliegue — anillo, botón de sesión, check-in — NO pasan por aquí a
+// propósito: lo que el paciente viene a hacer se ve al instante, sin animación.
 function Seccion({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="rep-card"><div className="rep-label">{label}</div>{children}</div>
+  return <Revelar className="rep-card"><div className="rep-label">{label}</div>{children}</Revelar>
 }
 
 function IconCheck() {
@@ -513,7 +517,7 @@ export function GuiaPaciente({
         )}
 
         {/* Motivación: ¡Tú puedes! */}
-        <div className="rep-banner">
+        <Revelar className="rep-banner">
           <span className="rep-banner-ico">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l7.1-1.01L12 2z"/></svg>
           </span>
@@ -521,7 +525,7 @@ export function GuiaPaciente({
             <div className="rep-banner-t">¡Tú puedes!</div>
             <p className="rep-banner-p">{i.motivacion || 'La constancia es la clave. Si tienes dudas o algún ejercicio te causa dolor, contacta con tu fisioterapeuta.'}</p>
           </div>
-        </div>
+        </Revelar>
 
         <button className="btn-line rep-print guia-no-print" onClick={() => window.print()} style={{ width: '100%', marginTop: 6 }}>Descargar en PDF</button>
         <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--faint)', marginTop: 22 }}>Generado con RuDaMi · {cli?.nombre ?? ''}</p>
