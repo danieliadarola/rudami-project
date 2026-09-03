@@ -1256,3 +1256,104 @@ body {
 }
 :root[data-theme="dark"] .guia-empezar { color: var(--background); }
 :root[data-theme="dark"] .guia-empezar-ico { color: var(--background); }
+
+/* ============================================================
+   PORTADA DEL PACIENTE (/mi) — diseño real, Fase 2
+   Sustituye al esqueleto sobrio de la 1A. El orden vertical responde
+   a las preguntas de un paciente en el orden en que se las hace:
+   qué me toca hoy → cómo voy → qué viene → cómo me encuentro.
+   ============================================================ */
+
+/* Aparición al hacer scroll. Transform + opacity: los dos únicos
+   cambios que el navegador anima en el compositor, sin repintar. */
+.revelar {
+  opacity: 0; transform: translateY(14px);
+  transition: opacity .6s cubic-bezier(.22,1,.36,1), transform .6s cubic-bezier(.22,1,.36,1);
+  will-change: opacity, transform;
+}
+.revelar.dentro { opacity: 1; transform: none; will-change: auto; }
+@media (prefers-reduced-motion: reduce) {
+  .revelar { opacity: 1; transform: none; transition: none; }
+}
+
+.mi-fecha {
+  font-size: 12.5px; color: var(--faint); letter-spacing: .01em; margin-bottom: 5px;
+}
+.mi-fecha::first-letter { text-transform: uppercase; }
+
+/* Bloque de hoy: el único elemento con peso visual de la pantalla. */
+.mi-hoy {
+  border: 1px solid var(--hair); border-radius: 18px; padding: 20px;
+  background: var(--paper); margin-bottom: 16px;
+}
+.mi-hoy-fila { display: flex; align-items: center; gap: 18px; }
+.mi-hoy-txt { flex: 1; min-width: 0; }
+.mi-hoy-t { font-size: 16.5px; font-weight: 600; color: var(--ink); }
+.mi-hoy-d { font-size: 13.5px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+.mi-hoy-vacio { text-align: center; padding: 30px 22px; }
+
+.mi-racha {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 11px;
+  font-size: 12.5px; font-weight: 600;
+  color: var(--gold-d); background: var(--gold-bg);
+  border-radius: 999px; padding: 5px 12px;
+}
+
+/* Acción principal. Ancha y alta: se pulsa con una mano y a veces con dolor. */
+.mi-cta {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; min-height: 52px; margin-top: 18px;
+  border: 0; border-radius: 13px; cursor: pointer;
+  background: var(--ink); color: var(--paper);
+  font: inherit; font-size: 15.5px; font-weight: 600;
+  transition: opacity .2s, transform .12s;
+}
+.mi-cta:hover { opacity: .9; }
+.mi-cta:active { transform: scale(.99); }
+.mi-cta-ico {
+  width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+  display: grid; place-items: center; background: var(--gold); color: #fff;
+}
+:root[data-theme="dark"] .mi-cta { color: var(--background); }
+:root[data-theme="dark"] .mi-cta-ico { color: var(--background); }
+
+/* Secciones secundarias: sin caja, separadas por hairline. Menos peso
+   que el bloque de hoy a propósito — no compiten con él. */
+.mi-bloque { padding: 22px 0; border-top: 1px solid var(--hair-s); }
+.mi-label { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); margin-bottom: 14px; }
+.mi-label-fila { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.mi-label-fila .mi-label { margin-bottom: 10px; }
+.mi-ultimo { font-size: 12px; color: var(--muted); }
+
+.mi-eva { display: flex; align-items: center; gap: 16px; }
+.mi-eva .eva-range { flex: 1; }
+.mi-eva-num { font-size: 26px; font-weight: 700; min-width: 62px; text-align: right; font-variant-numeric: tabular-nums; }
+.mi-eva-num small { font-size: 13px; color: var(--faint); font-weight: 500; }
+.mi-eva-pies { display: flex; justify-content: space-between; font-size: 11px; color: var(--faint); margin-top: 4px; }
+
+.mi-secundario {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  width: 100%; min-height: 46px; margin-top: 16px;
+  border: 1px solid var(--hair); border-radius: 12px; cursor: pointer;
+  background: var(--paper); color: var(--ink);
+  font: inherit; font-size: 14.5px; font-weight: 600; text-decoration: none;
+  transition: border-color .2s, background .2s;
+}
+.mi-secundario:hover:not(:disabled) { border-color: var(--ink-2); }
+.mi-secundario:disabled { color: var(--muted); cursor: default; background: var(--paper-2); }
+.mi-ok { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: var(--gold); color: #fff; }
+
+.mi-alerta {
+  margin-top: 13px; border-radius: 10px; padding: 11px 13px;
+  background: rgba(220,38,38,.06); border: 1px solid rgba(220,38,38,.2);
+  color: var(--danger); font-size: 13px; font-weight: 600; line-height: 1.5;
+}
+
+.mi-pie { margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--hair-s); text-align: center; }
+.mi-pie .mi-salir { margin-top: 20px; }
+
+/* Escritorio: columna de lectura, no un panel estirado. */
+@media (min-width: 620px) {
+  .mi-portada { max-width: 560px; padding-top: 40px; }
+  .mi-saludo { font-size: 31px; }
+}
