@@ -8,6 +8,8 @@ Se escriben al cerrar un bloque grande, no en cada commit. La forma está en
 
 - [01 · La app del paciente](01-app-del-paciente.md) — identidad propia, lista
   blanca de columnas, dos puertas en el proxy, animación de scroll a 0 KB.
+- [02 · La pantalla de progreso](02-progreso.md) — abrir las métricas del fisio
+  con lista blanca, dos series en un eje, tono que informa sin juzgar.
 
 ---
 

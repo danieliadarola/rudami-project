@@ -1362,3 +1362,94 @@ body {
   .mi-portada { max-width: 560px; padding-top: 40px; }
   .mi-saludo { font-size: 31px; }
 }
+
+/* ============================================================
+   FASE 3 — PROGRESO (/mi/progreso) y barra de navegación
+   ============================================================ */
+
+/* La portada y el progreso dejan hueco a la barra fija de abajo. */
+.mi-portada { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+
+/* Barra inferior: dos pestañas (la fase 4 traerá la tercera). */
+.mi-nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  display: flex; justify-content: center; gap: 8px;
+  padding: 8px 16px calc(8px + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--paper) 86%, transparent);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--hair);
+}
+.mi-nav-item {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  min-width: 92px; padding: 6px 14px; border-radius: 12px;
+  font-size: 11.5px; font-weight: 600; letter-spacing: .01em;
+  color: var(--muted); text-decoration: none;
+  transition: color .15s ease, background .15s ease;
+}
+.mi-nav-item.activa { color: var(--gold-d); background: var(--gold-bg); }
+.mi-nav-item:not(.activa):hover { color: var(--ink); }
+
+/* Cabecera del episodio */
+.pg-episodio { font-size: 13px; color: var(--muted); margin: -14px 0 22px; }
+
+/* Gráfica del dolor */
+.pg-grafica svg { width: 100%; height: auto; display: block; }
+.pg-leyenda {
+  display: flex; gap: 18px; flex-wrap: wrap; margin-top: 10px;
+}
+.pg-ley-item {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12px; color: var(--muted);
+}
+
+/* Constancia semanal: seis barras HTML */
+.pg-semanas {
+  display: flex; gap: 10px; align-items: stretch; height: 132px;
+}
+.pg-sem {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  min-width: 0;
+}
+.pg-sem-pct { font-size: 11px; font-weight: 600; color: var(--muted); }
+.pg-sem.actual .pg-sem-pct { color: var(--gold-d); }
+.pg-sem-carril {
+  flex: 1; width: 100%; max-width: 34px; position: relative;
+  background: var(--hair); border-radius: 5px; overflow: hidden;
+}
+.pg-sem-lleno {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: var(--gold); border-radius: 4px 4px 0 0;
+}
+.pg-sem.actual .pg-sem-lleno { background: var(--gold-d); }
+.pg-sem-eti { font-size: 10.5px; color: var(--faint); white-space: nowrap; }
+.pg-sem.actual .pg-sem-eti { color: var(--ink-2); font-weight: 600; }
+
+/* Antes → ahora */
+.pg-tiles {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+.pg-tile {
+  border: 1px solid var(--hair); border-radius: 14px; padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 4px; background: var(--paper);
+}
+.pg-tile-n { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--faint); }
+.pg-tile-v { display: flex; align-items: baseline; gap: 7px; color: var(--muted); }
+.pg-tile-v svg { align-self: center; }
+.pg-tile-antes { font-size: 15px; }
+.pg-tile-v strong { font-size: 23px; font-weight: 700; color: var(--ink); }
+.pg-tile-v small { font-size: 11px; color: var(--faint); }
+.pg-tile-mejora {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11.5px; font-weight: 600; color: #16a34a;
+}
+.pg-tile-cambio { font-size: 11.5px; color: var(--muted); }
+
+.pg-nota { font-size: 11.5px; color: var(--faint); margin-top: 12px; }
+
+.mi-ver-progreso {
+  display: inline-block; margin-top: 10px;
+  font-size: 12.5px; font-weight: 600; color: var(--gold-d);
+  text-decoration: none;
+}
+.mi-ver-progreso:hover { text-decoration: underline; }

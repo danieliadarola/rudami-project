@@ -25,6 +25,7 @@ import { Anillo } from '@/components/paciente/Anillo'
 import { SemanaChecks } from '@/components/paciente/SemanaChecks'
 import { SparkDolor } from '@/components/paciente/SparkDolor'
 import { Revelar } from '@/components/paciente/Revelar'
+import { BarraMi } from '@/components/paciente/BarraMi'
 
 // Igual que en la guía: la sesión es la única pantalla con `motion` y no debe
 // pesar en la carga de la portada.
@@ -239,6 +240,7 @@ export function PortadaPaciente({
             </span>
           </div>
           <SparkDolor puntos={serieDolor} />
+          <a className="mi-ver-progreso" href="/mi/progreso">Ver todo mi progreso →</a>
         </Revelar>
       )}
 
@@ -255,6 +257,8 @@ export function PortadaPaciente({
         )}
         <a className="mi-salir" href="/api/logout?next=%2Fmi%2Fentrar">Cerrar sesión</a>
       </footer>
+
+      <BarraMi activa="hoy" />
 
       {sesionAbierta && (
         <SesionGuiada

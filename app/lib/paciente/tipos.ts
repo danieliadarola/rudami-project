@@ -106,6 +106,41 @@ export interface ResumenPaciente {
   tiene_plan: boolean
 }
 
+/** Una sesión clínica vista por el paciente: la fecha y SIETE números.
+ *  Espejo exacto de la lista blanca de mi_progreso() — si aquí apareciera
+ *  un campo de texto, algo se ha roto en la migración, no aquí. */
+export interface SesionProgreso {
+  fecha: string
+  /** dolor_eva medido por el fisio en consulta (0-10). */
+  dolor: number | null
+  movilidad: number | null
+  fuerza: number | null
+  rigidez: number | null
+  fatiga: number | null
+  sueno: number | null
+  adherencia: number | null
+}
+
+/** Pantalla de progreso (RPC mi_progreso). */
+export interface ProgresoPaciente {
+  hoy: string
+  /** El episodio activo (o el último, si no hay activo). */
+  episodio: {
+    titulo: string | null
+    fecha_inicio: string | null
+    fecha_fin: string | null
+    estado: string | null
+  } | null
+  /** Métricas de sesión del episodio, en orden cronológico. */
+  sesiones: SesionProgreso[]
+  /** Dolor diario contado por el paciente (180 días). */
+  checkins: { fecha: string; dolor: number }[]
+  /** Ejercicios marcados por día (180 días). */
+  checks_por_dia: { fecha: string; hechos: number }[]
+  /** Ejercicios del plan vigente: denominador de la adherencia. */
+  ejercicios_dia: number
+}
+
 /** Resultado de paciente_vincular(token). */
 export type ResultadoVinculo =
   | { ok: true; ya_vinculado?: boolean }
