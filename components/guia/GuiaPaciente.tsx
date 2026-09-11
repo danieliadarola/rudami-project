@@ -15,7 +15,7 @@ import { normalizarMusculos, nombresDeGrupos } from '@/app/lib/musculos'
 // decide cómo se cuenta una racha o de qué color va un dolor: la guía por
 // enlace y la app con sesión no pueden dar números distintos.
 import { iso, checksPorFecha as agruparChecks, calcularRacha, semanaDe, fechaLarga } from '@/app/lib/paciente/fechas'
-import { evaColor, youtubeId, iniciales } from '@/app/lib/paciente/formato'
+import { evaColor, youtubeId, iniciales, ilustracionEjercicio } from '@/app/lib/paciente/formato'
 import { Anillo } from '@/components/paciente/Anillo'
 import { SparkDolor } from '@/components/paciente/SparkDolor'
 import { SemanaChecks } from '@/components/paciente/SemanaChecks'
@@ -346,7 +346,7 @@ export function GuiaPaciente({
             <div className="rep-exlist">
               {ejs.map((e: any, idx: number) => {
                 const ytId = youtubeId(e.video_url)
-                const media = e.gif_url || e.imagen_url
+                const media = e.gif_url || e.imagen_url || ilustracionEjercicio(e.nombre)
                 const thumb = media || (ytId ? `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg` : null)
                 const hecho = checks.has(`${e.id}|${hoy}`)
                 const fq = faqEj.get((e.nombre ?? '').toLowerCase().trim())

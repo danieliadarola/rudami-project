@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img" aria-label="Gato-camello">
+  <!-- RuDaMi · ilustración de ejercicio · trazo propio -->
+  <rect width="480" height="360" fill="#f8f6f1"/>
+  <line x1="40" y1="306" x2="440" y2="306" stroke="#d8d2c6" stroke-width="6" stroke-linecap="round"/>
+  <g stroke="#2f3238" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- brazo -->
+    <path d="M150 188 L142 300"/>
+    <!-- espalda arqueada (fase gato) -->
+    <path d="M150 182 Q244 106 334 184"/>
+    <!-- muslo y espinilla apoyada -->
+    <path d="M334 186 L356 298"/>
+    <path d="M356 298 L416 298"/>
+  </g>
+  <circle cx="112" cy="196" r="21" fill="#f8f6f1" stroke="#2f3238" stroke-width="7"/>
+  <!-- la espalda sube y baja -->
+  <g stroke="#c8952a" stroke-width="5.5" fill="#c8952a" stroke-linecap="round">
+    <line x1="250" y1="88" x2="250" y2="58"/>
+    <polygon points="250,44 242,60 258,60" stroke="none"/>
+    <polygon points="250,102 242,86 258,86" stroke="none"/>
+  </g>
+</svg>

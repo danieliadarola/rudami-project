@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img" aria-label="Inclinación cervical lateral">
+  <!-- RuDaMi · ilustración de ejercicio · trazo propio -->
+  <rect width="480" height="360" fill="#f8f6f1"/>
+  <!-- hombros y tronco, de frente -->
+  <g stroke="#2f3238" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M138 262 Q240 242 342 262"/>
+    <path d="M152 264 L146 318"/>
+    <path d="M328 264 L334 318"/>
+    <!-- cuello ligeramente inclinado hacia la derecha -->
+    <path d="M230 248 L242 212"/>
+    <path d="M260 248 L262 216"/>
+  </g>
+  <!-- cabeza inclinada hacia el hombro derecho -->
+  <circle cx="264" cy="164" r="44" fill="#f8f6f1" stroke="#2f3238" stroke-width="7"/>
+  <!-- la oreja va hacia el hombro, en arco -->
+  <g stroke="#c8952a" stroke-width="5.5" fill="#c8952a" stroke-linecap="round">
+    <path d="M186 102 A96 96 0 0 1 318 130" fill="none"/>
+    <polygon points="330,148 310,144 322,124" stroke="none"/>
+  </g>
+</svg>

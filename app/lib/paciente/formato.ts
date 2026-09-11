@@ -17,14 +17,53 @@ export function youtubeId(url?: string | null): string | null {
   return m ? m[1] : null
 }
 
-/** Miniatura de un ejercicio: GIF > imagen > fotograma de YouTube. */
+/**
+ * Ilustraciones propias (public/ejercicios/*.svg) para ejercicios habituales.
+ * Trazo de línea dibujado a mano para RuDaMi: sin licencias de terceros
+ * (los medios de openGym son © Gym Visual y NO se pueden usar).
+ *
+ * La clave es el nombre normalizado: minúsculas, sin acentos, sin signos.
+ * Si el fisio escribe una variante ("Puente de glúteos"), simplemente no hay
+ * ilustración y se cae al siguiente escalón; nunca sale un dibujo equivocado.
+ */
+const ILUSTRACIONES: Record<string, string> = {
+  'bascula pelvica': 'bascula-pelvica',
+  'gato camello': 'gato-camello',
+  'puente de gluteo': 'puente-gluteo',
+  'retraccion cervical doble menton': 'retraccion-cervical',
+  'inclinacion cervical lateral': 'inclinacion-cervical-lateral',
+}
+
+const claveNombre = (nombre: string): string =>
+  nombre
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+
+export function ilustracionEjercicio(nombre?: string | null): string | null {
+  if (!nombre) return null
+  const slug = ILUSTRACIONES[claveNombre(nombre)]
+  return slug ? `/ejercicios/${slug}.svg` : null
+}
+
+/**
+ * Miniatura de un ejercicio: GIF > imagen > ilustración propia > fotograma
+ * de YouTube. Lo que subió el fisio manda siempre; nuestra ilustración le
+ * gana al fotograma automático porque es coherente con la marca y no trae
+ * texto ni marcos negros (el vídeo sigue disponible al tocar).
+ */
 export function miniaturaEjercicio(e: {
+  nombre?: string | null
   gif_url?: string | null
   imagen_url?: string | null
   video_url?: string | null
 }): string | null {
   if (e.gif_url) return e.gif_url
   if (e.imagen_url) return e.imagen_url
+  const propia = ilustracionEjercicio(e.nombre)
+  if (propia) return propia
   const yt = youtubeId(e.video_url)
   return yt ? `https://i.ytimg.com/vi/${yt}/hqdefault.jpg` : null
 }

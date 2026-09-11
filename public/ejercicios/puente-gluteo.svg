@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img" aria-label="Puente de glúteo">
+  <!-- RuDaMi · ilustración de ejercicio · trazo propio -->
+  <rect width="480" height="360" fill="#f8f6f1"/>
+  <!-- suelo -->
+  <line x1="40" y1="306" x2="440" y2="306" stroke="#d8d2c6" stroke-width="6" stroke-linecap="round"/>
+  <g stroke="#2f3238" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- brazo apoyado -->
+    <path d="M118 292 L212 296"/>
+    <!-- tronco elevado hasta la cadera -->
+    <path d="M112 280 L252 198"/>
+    <!-- muslo y pierna -->
+    <path d="M252 198 L316 192"/>
+    <path d="M316 192 L330 302"/>
+  </g>
+  <!-- cabeza -->
+  <circle cx="82" cy="276" r="23" fill="#f8f6f1" stroke="#2f3238" stroke-width="7"/>
+  <!-- la cadera sube -->
+  <g stroke="#c8952a" stroke-width="5.5" fill="#c8952a" stroke-linecap="round">
+    <line x1="252" y1="158" x2="252" y2="114"/>
+    <polygon points="252,96 243,116 261,116" stroke="none"/>
+  </g>
+</svg>

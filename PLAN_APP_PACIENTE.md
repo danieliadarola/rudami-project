@@ -101,14 +101,21 @@ Ojo: el asistente gasta **hasta 5 llamadas por mensaje** (bucle de function-call
   2-4 correos/hora y solo a direcciones del equipo — vale para desarrollar y para
   una demo controlada, pero hay que pasar a **Resend** antes de que se registren
   pacientes reales.
-- **Fase 2 — La experiencia.** 🚧 En curso.
+- **Fase 2 — La experiencia.** ✅ Completada el 11/09/2026.
   - ✅ **Sesión guiada** (`components/paciente/SesionGuiada.tsx`), accesible desde
     `/r/[token]` — a propósito: llega al enlace que ya se usa en demos, sin
     esperar a que nadie se registre.
-  - ⏳ Pendiente: scroll triggers y secciones `sticky` en la guía, portada de
-    `/mi` con diseño real, ilustraciones SVG de los 8 ejercicios sin foto.
-  - ⚠️ **Sin verificación visual**: la extensión de Chrome no estaba conectada.
-    Comprobado estructuralmente (botón, CSS servido, chunk aparte), no en pantalla.
+  - ✅ **Portada de `/mi`** con diseño real (`PortadaPaciente.tsx`), escrituras
+    por identidad (`mi_marcar_ejercicio` / `mi_checkin`).
+  - ✅ **Scroll triggers** en `/mi` y en la guía (`Revelar`, IntersectionObserver
+    a 0 KB; el helper `Seccion` los reparte a todas las tarjetas).
+  - ✅ **Ilustraciones SVG propias** (`public/ejercicios/*.svg`): al recontar,
+    eran 5 ejercicios sin imagen, no 8 (los informes cambiaron desde el plan).
+    Trazo de línea propio, sin licencias de terceros. Encadenadas en
+    `miniaturaEjercicio()`: gif > imagen del fisio > ilustración > YouTube.
+  - ⚠️ **Sin verificación visual en navegador**: la extensión de Chrome no estaba
+    conectada. Las ilustraciones sí se verificaron visualmente (rasterizadas con
+    sharp) y el resto estructuralmente (HTML servido, CSS, chunks).
 
   **Decisiones de la sesión guiada:**
   - *"Una cosa cada vez"*: desaparece todo menos el ejercicio de ahora. Una

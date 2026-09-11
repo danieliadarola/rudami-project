@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 360" role="img" aria-label="Retracción cervical, doble mentón">
+  <!-- RuDaMi · ilustración de ejercicio · trazo propio -->
+  <rect width="480" height="360" fill="#f8f6f1"/>
+  <!-- posición inicial (cabeza adelantada), en fantasma -->
+  <circle cx="286" cy="140" r="44" fill="none" stroke="#cec8bb" stroke-width="5" stroke-dasharray="2 14" stroke-linecap="round"/>
+  <!-- busto de perfil -->
+  <g stroke="#2f3238" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M150 312 Q160 246 216 232"/>
+    <path d="M330 312 Q322 242 270 226"/>
+    <path d="M230 226 L234 182"/>
+    <path d="M262 224 L256 182"/>
+  </g>
+  <!-- cabeza retraída (posición correcta) -->
+  <circle cx="244" cy="138" r="44" fill="#f8f6f1" stroke="#2f3238" stroke-width="7"/>
+  <!-- nariz -->
+  <path d="M203 130 L192 140 L204 148" fill="none" stroke="#2f3238" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- el mentón va hacia atrás -->
+  <g stroke="#c8952a" stroke-width="5.5" fill="#c8952a" stroke-linecap="round">
+    <line x1="368" y1="140" x2="318" y2="140"/>
+    <polygon points="302,140 320,131 320,149" stroke="none"/>
+  </g>
+</svg>
