@@ -16,7 +16,7 @@ import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { supabase } from '@/app/lib/supabase'
 import type {
-  CuentaPaciente, PlanPaciente, ProgramaDetalle, ResumenPaciente, TarjetaPrograma, EjercicioGuia,
+  AvisoPaciente, CuentaPaciente, PlanPaciente, ProgramaDetalle, ResumenPaciente, TarjetaPrograma, EjercicioGuia,
 } from '@/app/lib/paciente/tipos'
 import { esPremium } from '@/app/lib/paciente/tipos'
 import { checksPorFecha, calcularRacha } from '@/app/lib/paciente/fechas'
@@ -39,13 +39,22 @@ export function PortadaPaciente({
   programas,
   programaHoy,
   proximaCita,
+  avisos,
 }: {
   cuenta: CuentaPaciente
   plan: PlanPaciente | null
   programas: TarjetaPrograma[]
   programaHoy: ProgramaDetalle | null
   proximaCita: ResumenPaciente['proxima_cita']
+  /** Avisos de la clínica sin leer. */
+  avisos: AvisoPaciente[]
 }) {
+  const [pendientes, setPendientes] = useState(avisos)
+  const leerAviso = async (id: string) => {
+    setPendientes((prev) => prev.filter((a) => a.id !== id))
+    await supabase.rpc('mi_aviso_leer', { p_id: id })
+  }
+
   const hoy = cuenta.hoy
   const premium = esPremium(cuenta)
 
@@ -157,6 +166,18 @@ export function PortadaPaciente({
         {ejercicios.length > 0 ? 'Aquí tienes tu plan de hoy.' : 'Tu salud también es un hábito.'}
         {' '}<span style={{ color: 'var(--faint)' }}>{fechaHoy}</span>
       </p>
+
+      {/* 0 · Avisos de la clínica (sin leer) */}
+      {pendientes.map((a) => (
+        <section key={a.id} className="ap-consejo nota" style={{ marginTop: 18 }} role="status">
+          <IcoClinica size={18} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="ap-consejo-t">Aviso de {cuenta.clinica?.nombre ?? 'tu clínica'}{a.autor ? ` · ${a.autor}` : ''}</div>
+            <div className="ap-consejo-d">{a.texto}</div>
+            <button type="button" className="ap-btn-texto" onClick={() => leerAviso(a.id)}>Entendido</button>
+          </div>
+        </section>
+      ))}
 
       {/* 1 · Qué viene */}
       {proximaCita && (

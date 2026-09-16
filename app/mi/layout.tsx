@@ -9,6 +9,7 @@
 //      paciente vinculado (autoritativa; ver la migración de identidad).
 
 import type { Metadata } from 'next'
+import { RegistroSW } from '@/components/paciente/RegistroSW'
 
 export const metadata: Metadata = {
   title: 'RuDaMi',
@@ -31,5 +32,10 @@ export const viewport = {
 }
 
 export default function LayoutPaciente({ children }: { children: React.ReactNode }) {
-  return <div className="mi-shell">{children}</div>
+  return (
+    <div className="mi-shell">
+      {children}
+      <RegistroSW />
+    </div>
+  )
 }

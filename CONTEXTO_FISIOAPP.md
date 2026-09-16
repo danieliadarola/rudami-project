@@ -105,8 +105,19 @@ botón Premium registra interés y lo dice. Fases 3 y 4 (parcial) hechas.
 
 ## Pendiente / futuro
 
-**De la v2 (16/09):** Stripe; avisos unidireccionales de la clínica; iconos
-del manifest. (La bandeja de solicitudes de cita ya está en `/citas`.)
+**De la v2 (16/09):** Stripe. (Bandeja de solicitudes en `/citas`, avisos de
+la clínica, service worker, iconos y keep-alive por cron de Vercel: hechos.)
+
+**Configuración de Supabase que sigue pendiente de hacer a mano (gratis):**
+- Authentication → URL Configuration → Redirect URLs: añadir
+  `https://rudami-project.vercel.app/mi/callback**` y
+  `http://localhost:3000/mi/callback**`. Sin esto el enlace mágico del paciente
+  no vuelve a la app.
+- El remitente por defecto de Supabase solo manda a correos del equipo del
+  proyecto (2-4/hora): vale para probar con tu propio correo. Para pacientes
+  reales, Resend (3.000/mes gratis) en Authentication → SMTP Settings.
+- Authentication → Password: activar «Leaked password protection» (lo pide el
+  linter; solo afecta a las contraseñas de los fisios).
 
 
 **Bloqueado por credenciales (dos cosas, un solo trámite cada una):**
@@ -114,9 +125,9 @@ del manifest. (La bandeja de solicitudes de cita ya está en `/citas`.)
   Supabase manda 2-3 correos/hora y solo a direcciones del equipo: no sirve ni
   para demos. Recomendado **Resend** (3.000/mes gratis). Sin esto no hay enlace
   mágico y `/mi/entrar` sigue siendo una pantalla informativa.
-- **Secretos del keep-alive** en GitHub → Settings → Secrets → Actions:
-  `SUPABASE_URL` y `SUPABASE_ANON_KEY` (esta es pública, ya va en el bundle).
-  Sin ellos el workflow falla y el proyecto se puede pausar antes de una demo.
+- ~~Secretos del keep-alive en GitHub~~ **Ya no hace falta:** desde el 16/09
+  el keep-alive corre como cron diario de Vercel (`/api/keepalive`), con las
+  variables que Vercel ya tiene. El workflow de GitHub queda de respaldo.
 
 **Siguiente punto (plan acordado, a falta de la clave):**
 - **El alta de fisios nunca ha funcionado.** Cinco fallos encadenados: (1) `perfiles` no tiene policy de INSERT, así que RLS bloquea el `upsert`; (2) el `upsert` escribe una columna `email` que no existe en la tabla; (3) `auth.signUp()` desde el navegador cambia la sesión del admin por la del fisio recién creado; (4) el `upsert` no comprueba el error y pinta "creado" pase lo que pase — por eso nadie se dio cuenta; (5) el admin teclea la contraseña de su compañero. Los 4 perfiles actuales se crearon a mano.

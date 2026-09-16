@@ -265,6 +265,16 @@ Aceptar una cancelación cancela la cita. Aceptar un cambio abre el formulario
 de reprogramar con la cita original todavía en pie: no se deja al paciente sin
 cita mientras se elige la nueva fecha.
 
+### 3.7b Avisos: la clínica escribe, el paciente lee
+
+La tabla `avisos` es la segunda con policy de clínica (select, insert y
+delete por `clinica_actual()`). La clínica escribe desde la ficha del paciente
+(`components/pacientes/AvisosPaciente.tsx`); el paciente los lee por
+`mi_avisos()` y los marca con `mi_aviso_leer()`, las dos por identidad. Sin
+bandeja de entrada: es a propósito (una clínica pequeña con mensajes sin
+responder da peor imagen que no tenerlos). En Inicio, el aviso sale en la
+tarjeta dorada de "nota" con un botón «Entendido».
+
 ### 3.8 El calendario es propio
 
 FullCalendar pesa unos 200 KB y está hecho para la agenda del fisio en
@@ -282,7 +292,24 @@ El locale sueco es un truco conocido: es el que formatea como ISO. Y se fuerza
 Europe/Madrid por la misma razón que el `hoy` viene del servidor: el móvil del
 paciente puede estar en otra zona.
 
-### 3.9 Sin Stripe, sin fingir
+### 3.9 Offline: lo último que viste, y nada más
+
+`public/sw.js` es un service worker de 60 líneas. Estáticos (`/_next/static`,
+ilustraciones, iconos) cache-first; navegaciones dentro de `/mi` network-first
+con copia, y sin red se sirve la copia o `/offline`. Dos detalles que importan:
+
+- Solo se guarda una respuesta si `res.ok && !res.redirected`: una redirección
+  a la puerta no debe quedar cacheada como si fuera el inicio.
+- Al navegar a `/mi/entrar` se borra la caché de páginas entera. Es la puerta
+  por la que se pasa al cerrar sesión o caducar: en un móvil compartido, el
+  siguiente no ve el plan del anterior.
+
+`/offline` vive fuera de `/mi` porque el proxy exige sesión dentro y el service
+worker la precachea sin sesión al instalarse. Se registra solo en producción
+(`components/paciente/RegistroSW.tsx`). No hay cola de escrituras offline: para
+marcar un ejercicio hace falta red, y la página lo dice.
+
+### 3.10 Sin Stripe, sin fingir
 
 El botón "Quiero Premium" no activa nada (`components/paciente/Planes.tsx:37`):
 
@@ -325,6 +352,11 @@ precedencia: `b left join c` se resuelve antes y `a` no es visible en el `on`.
 Arreglo: `from a left join c on ... cross join b`. Pasó en
 `programa_tarjeta_json` y tumbó la migración entera (se aplica en transacción,
 así que no quedó nada a medias).
+
+**El paciente demo "ve" tablas de la clínica.** Lucía Fernández está vinculada
+al usuario del admin (el tuyo). Si pruebas con ese `sub`, `clinica_actual()`
+devuelve la clínica y las policies de clínica se aplican: no es una fuga. Para
+probar como paciente puro usa un `sub` inventado, como en "Compruébalo tú".
 
 **Probar RPCs con `set role authenticated` y una subconsulta a una tabla** →
 la subconsulta devuelve null porque la RLS ya está activa para ese rol. Saca

@@ -10,7 +10,7 @@
 //   · Usuario independiente → solo biblioteca (mi_rutinas); sin cita ni check-in.
 
 import { cargarCuenta } from '@/app/lib/paciente/cuenta'
-import type { PlanPaciente, ProgramaDetalle, ResumenPaciente, TarjetaPrograma } from '@/app/lib/paciente/tipos'
+import type { AvisoPaciente, PlanPaciente, ProgramaDetalle, ResumenPaciente, TarjetaPrograma } from '@/app/lib/paciente/tipos'
 import { PortadaPaciente } from '@/components/paciente/PortadaPaciente'
 
 export const revalidate = 0
@@ -19,10 +19,11 @@ export default async function Inicio() {
   const { supabase, cuenta } = await cargarCuenta()
   const esClinica = cuenta.tipo === 'clinica'
 
-  const [{ data: plan }, { data: rutinas }, { data: resumen }] = await Promise.all([
+  const [{ data: plan }, { data: rutinas }, { data: resumen }, { data: avisos }] = await Promise.all([
     esClinica ? supabase.rpc('mi_plan') : Promise.resolve({ data: null }),
     supabase.rpc('mi_rutinas'),
     esClinica ? supabase.rpc('mi_resumen') : Promise.resolve({ data: null }),
+    esClinica ? supabase.rpc('mi_avisos') : Promise.resolve({ data: null }),
   ])
 
   const programas = ((rutinas as TarjetaPrograma[] | null) ?? []).filter((p) => p.activo)
@@ -42,6 +43,7 @@ export default async function Inicio() {
       programas={programas}
       programaHoy={programaHoy}
       proximaCita={(resumen as ResumenPaciente | null)?.proxima_cita ?? null}
+      avisos={((avisos as AvisoPaciente[] | null) ?? []).filter((a) => !a.leido)}
     />
   )
 }

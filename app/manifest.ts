@@ -26,21 +26,12 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#1f6b5c', // --verde de la app del paciente
     categories: ['health', 'medical', 'fitness'],
     icons: [
-      {
-        // PENDIENTE: sustituir por 192/512 optimizados cuando esté la
-        // identidad visual definitiva (Fase 2). Hoy es el logo a 1254px:
-        // funciona, pero pesa 868 KB.
-        src: '/logo.png',
-        sizes: 'any',
-        type: 'image/png',
-        purpose: 'any',
-      },
-      {
-        src: '/logo.png',
-        sizes: 'any',
-        type: 'image/png',
-        purpose: 'maskable',
-      },
+      // Generados con sharp desde public/logo.png (16/09/2026). El maskable
+      // lleva el logo al 70 % sobre el verde de la app: la zona segura de
+      // Android recorta un círculo del 80 %, y sin margen se comen el logo.
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
   }
 }

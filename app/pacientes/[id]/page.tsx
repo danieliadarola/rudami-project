@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { AvisosPaciente } from '@/components/pacientes/AvisosPaciente'
 import { createClient } from '@/app/lib/supabase-server'
 import { AppShell } from '@/components/layout/AppShell'
 import { DI } from '@/components/ui/DashboardIcons'
@@ -140,6 +141,8 @@ export default async function FichaPaciente({ params }: { params: Promise<{ id: 
                 </Link>
               </div>
             )}
+
+            <AvisosPaciente pacienteId={id} />
 
             {bono && (
               <div>

@@ -139,10 +139,15 @@ Ojo: el asistente gasta **hasta 5 llamadas por mensaje** (bucle de function-call
 - **Fase 4 — Citas, bonos y comunicación.** ✅ Parcial, 16/09/2026 (dentro de la
   v2, ver abajo): calendario con citas y **solicitud** de cambio/cancelación
   (`citas_solicitudes`, RPC `mi_cita_solicitar`), bono sin precios en el perfil,
-  WhatsApp a la clínica, y **bandeja en la agenda de la clínica** (`/citas`,
-  `components/citas/SolicitudesCitas.tsx`) para aceptar o rechazar. **Pendiente:**
-  los avisos unidireccionales.
-- **Fase 5 — Endurecer.** Service worker y plan de hoy offline.
+  WhatsApp a la clínica, **bandeja en la agenda de la clínica** (`/citas`,
+  `components/citas/SolicitudesCitas.tsx`) para aceptar o rechazar, y **avisos
+  unidireccionales** (tabla `avisos`, la clínica escribe desde la ficha del
+  paciente, el paciente los ve en Inicio y pulsa «Entendido»). ✅ Completa.
+- **Fase 5 — Endurecer.** ✅ 16/09/2026. `public/sw.js`: estáticos cache-first,
+  navegaciones de `/mi` network-first con copia; sin red, la última copia o
+  `/offline`. Al pasar por `/mi/entrar` se borran las copias (móvil compartido).
+  Solo se registra en producción (`RegistroSW`). Sin cola de escrituras: para
+  marcar hace falta red, y la página offline lo dice.
 - **Fase 6 — Capacitor.** Solo si un cliente lo paga.
 
 ## v2 — "mini fisio app" para todo el mundo (16/09/2026)
@@ -206,10 +211,18 @@ admin real: ve la solicitud de Lucía, la resuelve, y otro `authenticated` ve 0
 filas. **Sin verificación visual** en navegador:
 la extensión de Chrome sigue sin conectar; se comprobó el HTML servido.
 
+### Hecho después de la v2 (misma tarde, 16/09/2026)
+- Iconos del manifest 192/512 + maskable (sharp, desde `public/logo.png`).
+- Keep-alive **sin secretos**: `app/api/keepalive/route.ts` + cron diario en
+  `vercel.json` (Hobby permite crons diarios). El workflow de GitHub queda como
+  respaldo, pero ya no hace falta configurar nada para que la base no se pause.
+- `rls_auto_enable()` (función del event trigger) ya no es ejecutable por la API
+  (lo marcaba el linter de Supabase). Los avisos `rls_enabled_no_policy` sobre
+  las tablas `app_*` y `programas` son **intencionados**: sin policy = sin acceso.
+
 ### Pendiente de la v2
 - Stripe (mensual y anual) → escribir `premium_hasta`.
 - Progresiones / rutinas adaptativas (anunciadas como "próximamente").
-- Iconos 192/512 del manifest (sigue el logo de 868 KB).
 - Un correo real de soporte (hoy `hola@rudami.app` en Ajustes).
 
 ## openGym

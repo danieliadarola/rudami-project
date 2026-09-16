@@ -235,6 +235,15 @@ export interface CitasPaciente {
   citas: CitaPaciente[]
 }
 
+/** Aviso unidireccional de la clínica (RPC mi_avisos). */
+export interface AvisoPaciente {
+  id: string
+  texto: string
+  autor: string | null
+  fecha: string
+  leido: boolean
+}
+
 /** RPC mi_estadisticas(): los números del perfil. */
 export interface EstadisticasPaciente {
   objetivo_semanal: number
