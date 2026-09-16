@@ -32,6 +32,9 @@ export interface DatosClinicos {
   pregunta_paciente?: string
   /** Guía del paciente: últimos turnos del chat para dar continuidad */
   historial_chat?: string
+  /** App del paciente: 'clinica' (plan de un fisio) o 'independiente'
+   *  (programas de la biblioteca, sin fisioterapeuta asignado). */
+  modo_app?: 'clinica' | 'independiente'
 }
 
 /** Respuesta estructurada del copiloto clínico en tiempo real. */

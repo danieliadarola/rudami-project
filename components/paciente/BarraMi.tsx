@@ -1,6 +1,6 @@
 // components/paciente/BarraMi.tsx
-// Barra inferior de la app del paciente. Dos pestañas hoy; la fase 4 (citas)
-// añadirá la tercera.
+// Barra inferior de la app del paciente: las cinco secciones del boceto
+// (Inicio · Rutinas · Sesiones · Chat · Perfil).
 //
 // Server Component a propósito: la pestaña activa llega por prop desde cada
 // página en vez de leerse con usePathname(), que obligaría a 'use client' y
@@ -10,31 +10,14 @@
 // /mi/callback, donde una barra de navegación no pinta nada.
 
 import Link from 'next/link'
+import { IcoCasa, IcoRutinas, IcoCalendario, IcoChat, IcoPerfil } from './Iconos'
 
 const PESTANAS = [
-  {
-    id: 'hoy',
-    href: '/mi',
-    texto: 'Hoy',
-    icono: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="m3 10 9-7 9 7v10a1.6 1.6 0 0 1-1.6 1.6H4.6A1.6 1.6 0 0 1 3 20Z" />
-        <path d="M9 21.5v-8h6v8" />
-      </svg>
-    ),
-  },
-  {
-    id: 'progreso',
-    href: '/mi/progreso',
-    texto: 'Progreso',
-    icono: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M3 20h18" />
-        <path d="M5 16.5 10 11l3.5 3.5L19 8" />
-        <path d="M19 12V8h-4" />
-      </svg>
-    ),
-  },
+  { id: 'hoy',      href: '/mi',          texto: 'Inicio',   Icono: IcoCasa },
+  { id: 'rutinas',  href: '/mi/rutinas',  texto: 'Rutinas',  Icono: IcoRutinas },
+  { id: 'sesiones', href: '/mi/sesiones', texto: 'Sesiones', Icono: IcoCalendario },
+  { id: 'chat',     href: '/mi/chat',     texto: 'Chat',     Icono: IcoChat },
+  { id: 'perfil',   href: '/mi/perfil',   texto: 'Perfil',   Icono: IcoPerfil },
 ] as const
 
 export type PestanaMi = (typeof PESTANAS)[number]['id']
@@ -42,15 +25,15 @@ export type PestanaMi = (typeof PESTANAS)[number]['id']
 export function BarraMi({ activa }: { activa: PestanaMi }) {
   return (
     <nav className="mi-nav guia-no-print" aria-label="Secciones de la app">
-      {PESTANAS.map((p) => (
+      {PESTANAS.map(({ id, href, texto, Icono }) => (
         <Link
-          key={p.id}
-          href={p.href}
-          className={`mi-nav-item${p.id === activa ? ' activa' : ''}`}
-          aria-current={p.id === activa ? 'page' : undefined}
+          key={id}
+          href={href}
+          className={`mi-nav-item${id === activa ? ' activa' : ''}`}
+          aria-current={id === activa ? 'page' : undefined}
         >
-          {p.icono}
-          <span>{p.texto}</span>
+          <Icono />
+          <span>{texto}</span>
         </Link>
       ))}
     </nav>

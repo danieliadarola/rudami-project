@@ -12,9 +12,9 @@ import type { MetadataRoute } from 'next'
 export default function manifest(): MetadataRoute.Manifest {
   return {
     // El que instala es el PACIENTE. El fisio trabaja en escritorio.
-    name: 'RuDaMi · Mi recuperación',
-    short_name: 'Mi recuperación',
-    description: 'Tu plan de ejercicios, tu progreso y tu contacto con la clínica.',
+    name: 'RuDaMi',
+    short_name: 'RuDaMi',
+    description: 'Rutinas de ejercicios, cómo hacerlos, tus sesiones y tu progreso. Con tu clínica o por tu cuenta.',
     lang: 'es-ES',
     start_url: '/mi',
     // Ámbito completo: el enlace público /r/[token] también debe abrirse
@@ -23,7 +23,7 @@ export default function manifest(): MetadataRoute.Manifest {
     display: 'standalone',
     orientation: 'portrait',
     background_color: '#ffffff',
-    theme_color: '#16181f', // --ink del sistema v3
+    theme_color: '#1f6b5c', // --verde de la app del paciente
     categories: ['health', 'medical', 'fitness'],
     icons: [
       {

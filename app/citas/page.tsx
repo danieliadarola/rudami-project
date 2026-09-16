@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/app/lib/supabase'
 import { AppShell } from '@/components/layout/AppShell'
 import { DI } from '@/components/ui/DashboardIcons'
+import { SolicitudesCitas } from '@/components/citas/SolicitudesCitas'
 import { normalizarTelefono, whatsappLink, mensajeCita } from '@/app/lib/whatsapp'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
@@ -211,6 +212,9 @@ export default function Calendario() {
               ))}
               {tipos.length === 0 && <p style={{ fontSize: 11.5, color: 'var(--faint)', padding: '4px 8px' }}>Sin tipos definidos.</p>}
             </div>
+
+            {/* Solicitudes de cambio/cancelación hechas desde la app del paciente */}
+            <SolicitudesCitas onCambio={cargar} />
 
             <div style={{ marginBottom: 22 }}>
               <div className="cal-side-h">Resumen hoy</div>

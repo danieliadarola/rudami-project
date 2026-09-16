@@ -1,51 +1,47 @@
 // app/mi/page.tsx
-// Portada de la app del paciente.
+// Inicio de la app del paciente.
 //
-// Server Component a propósito: los datos clínicos se resuelven en el servidor
-// y llegan ya pintados, sin que el móvil tenga que esperar a un fetch después
-// de hidratar. La interactividad (marcar, check-in, sesión guiada) vive en
-// <PortadaPaciente/>, que sí es de cliente.
+// Server Component a propósito: los datos se resuelven en el servidor y
+// llegan ya pintados. La interactividad (marcar, check-in, sesión guiada)
+// vive en <PortadaPaciente/>, que sí es de cliente.
+//
+// Dos públicos, una portada:
+//   · Paciente de clínica  → plan del fisio (mi_plan) + próxima cita + biblioteca.
+//   · Usuario independiente → solo biblioteca (mi_rutinas); sin cita ni check-in.
 
-import { redirect } from 'next/navigation'
-import { createClient } from '@/app/lib/supabase-server'
-import type { ResumenPaciente, PlanPaciente } from '@/app/lib/paciente/tipos'
+import { cargarCuenta } from '@/app/lib/paciente/cuenta'
+import type { PlanPaciente, ProgramaDetalle, ResumenPaciente, TarjetaPrograma } from '@/app/lib/paciente/tipos'
 import { PortadaPaciente } from '@/components/paciente/PortadaPaciente'
 
 export const revalidate = 0
 
-export default async function Portada() {
-  const supabase = await createClient()
+export default async function Inicio() {
+  const { supabase, cuenta } = await cargarCuenta()
+  const esClinica = cuenta.tipo === 'clinica'
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/mi/entrar')
-
-  // Ninguna de las dos recibe un id: resuelven la identidad por dentro con
-  // paciente_actual(). No hay nada que un cliente pueda manipular.
-  const [{ data: resumen }, { data: plan }] = await Promise.all([
-    supabase.rpc('mi_resumen'),
-    supabase.rpc('mi_plan'),
+  const [{ data: plan }, { data: rutinas }, { data: resumen }] = await Promise.all([
+    esClinica ? supabase.rpc('mi_plan') : Promise.resolve({ data: null }),
+    supabase.rpc('mi_rutinas'),
+    esClinica ? supabase.rpc('mi_resumen') : Promise.resolve({ data: null }),
   ])
 
-  const r = resumen as ResumenPaciente | null
+  const programas = ((rutinas as TarjetaPrograma[] | null) ?? []).filter((p) => p.activo)
 
-  // Sesión válida pero sin ficha vinculada: le pasa a quien tiene cuenta en
-  // RuDaMi por otro motivo (un fisio, por ejemplo) o a quien aún no ha
-  // completado la vinculación desde su enlace.
-  if (!r) {
-    return (
-      <main className="mi-vacio">
-        <p className="mi-wordmark">RUDAMI</p>
-        <h1>Esta cuenta todavía no está asociada a ninguna ficha</h1>
-        <p className="mi-nota">
-          Abre el enlace que te envió tu clínica y pulsa «Guarda tu progreso»
-          para vincular tu cuenta.
-        </p>
-        <p className="mi-nota">
-          <a className="mi-salir" href="/api/logout?next=%2Fmi%2Fentrar">Cerrar sesión</a>
-        </p>
-      </main>
-    )
+  // El bloque "hoy" necesita ejercicios. Si no hay plan del fisio, se tira del
+  // primer programa activo; solo entonces se pide su detalle.
+  let programaHoy: ProgramaDetalle | null = null
+  if (!plan && programas[0]) {
+    const { data } = await supabase.rpc('mi_programa', { p_id: programas[0].id })
+    programaHoy = (data as ProgramaDetalle | null) ?? null
   }
 
-  return <PortadaPaciente resumen={r} plan={(plan as PlanPaciente | null) ?? null} />
+  return (
+    <PortadaPaciente
+      cuenta={cuenta}
+      plan={(plan as PlanPaciente | null) ?? null}
+      programas={programas}
+      programaHoy={programaHoy}
+      proximaCita={(resumen as ResumenPaciente | null)?.proxima_cita ?? null}
+    />
+  )
 }

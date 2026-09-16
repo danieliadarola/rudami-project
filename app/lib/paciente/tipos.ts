@@ -145,3 +145,102 @@ export interface ProgresoPaciente {
 export type ResultadoVinculo =
   | { ok: true; ya_vinculado?: boolean }
   | { ok: false; motivo: 'sin_sesion' | 'sin_email' | 'no_coincide' | 'ya_reclamado' }
+
+/* ────────────────────────────────────────────────────────────────────
+   App v2 (16/09/2026): cuentas Free / Premium / Clinic, biblioteca de
+   programas, citas con solicitud y chat por identidad.
+   Espejo de supabase/migrations/20260916100000_app_paciente_cuentas_programas_citas.sql
+   ──────────────────────────────────────────────────────────────────── */
+
+/** 'clinica' = Premium incluido por la clínica · 'premium' · 'free' */
+export type EstadoPlan = 'clinica' | 'premium' | 'free'
+
+/** RPC mi_cuenta(): quién soy y en qué situación estoy. */
+export interface CuentaPaciente {
+  tipo: 'clinica' | 'independiente'
+  nombre: string | null
+  apellidos: string | null
+  email: string | null
+  hoy: string
+  plan: { estado: EstadoPlan; hasta: string | null; interes: boolean }
+  objetivo_semanal: number
+  clinica: { nombre: string | null; telefono: string | null; direccion: string | null } | null
+  /** Sesiones y caducidad. Sin precio, a propósito. */
+  bono: { titulo: string | null; total: number | null; usadas: number | null; caducidad: string | null } | null
+  tiene_plan_fisio: boolean
+}
+
+/** ¿Tiene acceso a lo Premium? La clínica lo incluye. */
+export const esPremium = (c: Pick<CuentaPaciente, 'plan'> | null | undefined): boolean =>
+  c?.plan.estado === 'clinica' || c?.plan.estado === 'premium'
+
+/** Tarjeta de un programa de la biblioteca (programa_tarjeta_json). */
+export interface TarjetaPrograma {
+  id: string
+  slug: string
+  titulo: string
+  descripcion: string | null
+  zona: string | null
+  nivel: string | null
+  semanas: number
+  frecuencia: string | null
+  premium: boolean
+  imagen_url: string | null
+  n_ejercicios: number
+  inscrito: boolean
+  activo: boolean
+  iniciado_en: string | null
+  semana_actual: number | null
+  hechos_hoy: number
+}
+
+/** Ejercicio de programa: misma forma que EjercicioGuia más tres campos de catálogo. */
+export interface EjercicioPrograma extends EjercicioGuia {
+  zona?: string | null
+  nivel?: string | null
+  equipo?: string | null
+}
+
+/** RPC mi_programa(id). */
+export interface ProgramaDetalle {
+  programa: TarjetaPrograma
+  ejercicios: EjercicioPrograma[]
+  checks: { ejercicio_id: string; fecha: string }[]
+  hoy: string
+}
+
+/** RPC mi_ejercicio(id) y mi_ejercicio_plan(id). */
+export interface EjercicioDetalle {
+  ejercicio: EjercicioPrograma
+  programa: { id: string; titulo: string }
+  faq?: { como_hacerlo?: string; sensacion_normal?: string } | null
+  hecho_hoy: boolean
+  hoy: string
+}
+
+/** Una cita vista por el paciente (RPC mi_citas). Sin notas del fisio. */
+export interface CitaPaciente {
+  id: string
+  fecha_hora: string
+  duracion_min: number | null
+  estado: 'pendiente' | 'confirmada' | 'cancelada' | string
+  tipo: string | null
+  color: string | null
+  fisio: string | null
+  solicitud: { tipo: 'cambio' | 'cancelacion'; estado: 'pendiente' | 'aceptada' | 'rechazada' } | null
+}
+
+export interface CitasPaciente {
+  hoy: string
+  citas: CitaPaciente[]
+}
+
+/** RPC mi_estadisticas(): los números del perfil. */
+export interface EstadisticasPaciente {
+  objetivo_semanal: number
+  dias_esta_semana: number
+  dias_activos_30: number
+  ejercicios_30: number
+  rutinas_activas: number
+  mejora_dolor_pct: number | null
+}

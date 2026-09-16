@@ -86,7 +86,28 @@ y **Vercel Hobby prohíbe el uso comercial** — el día que firme una clínica,
 
 **Trampa que costó dos intentos, para no repetirla:** en PostgreSQL, `revoke update (columna)` **no puede recortar un `UPDATE` concedido a nivel de tabla**, y Supabase concede `all` por defecto. No da error: el editor SQL dice "Success" y no cambia nada. Hay que `revoke update on <tabla>` y luego `grant update (columnas seguras)`. Verificar siempre con `has_column_privilege()`, nunca fiarse del mensaje del editor.
 
+## Estado a 16/09/2026 — app del paciente v2 (Free · Premium · Clinic)
+
+La app `/mi` pasa a ser una **"mini fisio app" para todo el mundo**, con cinco
+pestañas (Inicio · Rutinas · Sesiones · Chat · Perfil) y tres planes: **Free**
+(0 €), **Premium** (4,99 €/mes · 49,99 €/año: IA, biblioteca completa,
+estadísticas, objetivos) y **Clinic** (gratis para el paciente, Premium
+incluido porque su clínica paga). Regla de oro: **el paciente nunca paga por
+ver lo que le manda su fisio.** Detalle completo, decisiones y verificación en
+`PLAN_APP_PACIENTE.md` → "v2". Documento didáctico: `docs/03-app-v2-free-premium-clinic.md`.
+
+Titulares técnicos: 7 tablas nuevas (`app_usuarios`, `programas`,
+`programa_ejercicios`, `app_programas`, `app_checks`, `app_chat`,
+`citas_solicitudes`), 16 RPCs `mi_*` con lista blanca, biblioteca de 5
+programas (28 ejercicios) enlazados **por nombre** a `ejercicios`, calendario
+propio sin FullCalendar, chat por identidad (`/api/mi/chat`). Sin Stripe: el
+botón Premium registra interés y lo dice. Fases 3 y 4 (parcial) hechas.
+
 ## Pendiente / futuro
+
+**De la v2 (16/09):** Stripe; avisos unidireccionales de la clínica; iconos
+del manifest. (La bandeja de solicitudes de cita ya está en `/citas`.)
+
 
 **Bloqueado por credenciales (dos cosas, un solo trámite cada una):**
 - **SMTP para la Fase 1B de la app del paciente.** El remitente por defecto de

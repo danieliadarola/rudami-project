@@ -134,11 +134,83 @@ Ojo: el asistente gasta **hasta 5 llamadas por mensaje** (bucle de function-call
   - `segundosDeDescanso()` se queda con el primer número de un rango (el extremo
     corto) y devuelve null si no reconoce nada: mejor sin cronómetro que con uno
     inventado.
-- **Fase 3 — Progreso y evolución.** Historial por episodios, heatmap.
-- **Fase 4 — Citas, bonos y comunicación.** Alcance decidido (ver tabla arriba):
-  citas con solicitud de cambio, bono sin precios, WhatsApp + avisos.
+- **Fase 3 — Progreso y evolución.** ✅ 11/09/2026. `/mi/progreso`, RPC
+  `mi_progreso()` (solo números de `sesiones`). Doc: `docs/02-progreso.md`.
+- **Fase 4 — Citas, bonos y comunicación.** ✅ Parcial, 16/09/2026 (dentro de la
+  v2, ver abajo): calendario con citas y **solicitud** de cambio/cancelación
+  (`citas_solicitudes`, RPC `mi_cita_solicitar`), bono sin precios en el perfil,
+  WhatsApp a la clínica, y **bandeja en la agenda de la clínica** (`/citas`,
+  `components/citas/SolicitudesCitas.tsx`) para aceptar o rechazar. **Pendiente:**
+  los avisos unidireccionales.
 - **Fase 5 — Endurecer.** Service worker y plan de hoy offline.
 - **Fase 6 — Capacitor.** Solo si un cliente lo paga.
+
+## v2 — "mini fisio app" para todo el mundo (16/09/2026)
+
+Rediseño de la app a partir de dos bocetos del usuario (cinco pestañas:
+Inicio · Rutinas · Sesiones · Chat · Perfil) y, sobre todo, **cambio de
+público**: la app deja de ser solo para pacientes de una clínica.
+
+### Modelo de negocio decidido
+
+| Plan | Precio | Qué da |
+|---|---|---|
+| **Free** | 0 € | Biblioteca básica, rutinas guiadas, calendario, seguimiento básico, perfil e historial. |
+| **Premium** | 4,99 €/mes · 49,99 €/año | + asistente IA, biblioteca completa (programas avanzados), estadísticas y objetivo semanal. Progresiones y rutinas adaptativas se anuncian como *próximamente*, no como hechas. |
+| **Clinic** | gratis para el paciente | **Premium incluido** porque su clínica paga RuDaMi. Mensaje literal en la app: "Tu clínica te proporciona acceso". |
+
+Dos reglas que salen de esa decisión:
+- **El paciente nunca paga por ver lo que le manda su fisio.** Es el argumento
+  de venta a clínicas ("mi fisio me ha dado esta herramienta").
+- **Transición natural:** cuando acaba el tratamiento, la cuenta sigue viva
+  como usuario particular con sus rutinas e historial → potencial Premium.
+- La IA es *parte* de Premium, no Premium entero ("¿4,99 € por un chatbot?").
+
+**Sin Stripe todavía.** `app_usuarios.premium_hasta` es la única puerta; el
+botón "Quiero Premium" registra `premium_interes_at` y lo dice claro. Cuando
+haya cobro, el webhook solo tendrá que alargar esa fecha.
+
+### Qué se construyó
+
+- **Migración** `20260916100000_app_paciente_cuentas_programas_citas.sql`:
+  `app_usuarios` (cuenta, plan, objetivo), `programas` + `programa_ejercicios`
+  (5 programas curados sobre los 44 `ejercicios`, enlazados por nombre, 28
+  ejercicios; 2 de ellos Premium), `app_programas` (inscripción), `app_checks`
+  (marcas de programa), `app_chat` (chat del independiente), `citas_solicitudes`.
+  Quince RPCs `mi_*` nuevas con lista blanca. **Ninguna tabla nueva tiene policy
+  para el paciente**; la única policy nueva es para la clínica sobre
+  `citas_solicitudes`. Verificado con `set role authenticated`: acceso directo a
+  `programas` → 0 filas.
+- **Rutas:** `/mi` (inicio), `/mi/rutinas` (mis rutinas / biblioteca),
+  `/mi/rutinas/[id]` (`plan` = el del fisio), `/mi/ejercicio/[id]?de=plan|programa`,
+  `/mi/sesiones` (calendario propio, sin FullCalendar), `/mi/chat` + `/api/mi/chat`,
+  `/mi/perfil`, `/mi/perfil/ajustes`, `/mi/plan`, `/mi/progreso` (ahora bajo Perfil).
+- **Entrada:** `/mi/entrar` con portada verde, "Iniciar sesión" / "Crear cuenta"
+  (nombre + correo, enlace mágico; el nombre viaja en `?n=` hasta el callback,
+  como el token). El callback llama siempre a `mi_cuenta_crear` (idempotente).
+- **Chat:** clínica → `guia_chat` del informe (mismo historial que `/r/[token]`,
+  mismo límite de la clínica); independiente → `app_chat`, solo Premium, 10/día,
+  con prompt propio (`promptAppChatLibre`: sin fisio asignado, "consulta a un
+  profesional").
+- **Diseño:** tokens `--verde*` sobre el sistema v3; el oro se queda para racha
+  y plan completado. Prefijo CSS `ap-`. Barra de 5 pestañas.
+
+### Verificación (16/09/2026)
+`tsc` limpio · ESLint sin errores en los archivos tocados · `next build` OK
+(12 rutas nuevas) · RPCs probadas simulando un `authenticated` sin clínica
+(free: chat → `premium: true`, programa Premium → `premium: true`, acceso
+directo a tablas → 0) y el paciente vinculado real (cuenta clínica, citas,
+solicitud de cambio, chat). Sin sesión: las 9 rutas privadas → 307 a
+`/mi/entrar`, `/api/mi/chat` → 401. Bandeja de la clínica probada simulando al
+admin real: ve la solicitud de Lucía, la resuelve, y otro `authenticated` ve 0
+filas. **Sin verificación visual** en navegador:
+la extensión de Chrome sigue sin conectar; se comprobó el HTML servido.
+
+### Pendiente de la v2
+- Stripe (mensual y anual) → escribir `premium_hasta`.
+- Progresiones / rutinas adaptativas (anunciadas como "próximamente").
+- Iconos 192/512 del manifest (sigue el logo de 868 KB).
+- Un correo real de soporte (hoy `hola@rudami.app` en Ajustes).
 
 ## openGym
 

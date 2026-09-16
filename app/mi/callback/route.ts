@@ -3,6 +3,7 @@
 //
 // FLUJO COMPLETO:
 //   1. /r/[token] → "Guardar mi progreso" → /mi/entrar?t=<token>
+//      (o /mi/entrar → "Crear cuenta", sin token, para quien no tiene clínica)
 //   2. El paciente deja su correo; el cliente de navegador pide el enlace y, por
 //      ser PKCE, deja una cookie con el "code verifier".
 //   3. Supabase manda el correo; el enlace pasa por su /auth/v1/verify y vuelve
@@ -29,6 +30,8 @@ function alError(request: NextRequest, motivo: string, token?: string | null) {
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code')
   const token = request.nextUrl.searchParams.get('t')
+  // Nombre que dejó quien se creó la cuenta sin clínica (ver FormularioEntrar).
+  const nombre = request.nextUrl.searchParams.get('n')
 
   if (!code) return alError(request, 'sin_codigo', token)
 
@@ -53,6 +56,11 @@ export async function GET(request: NextRequest) {
       return alError(request, motivo, token)
     }
   }
+
+  // Todo el que entra en /mi tiene cuenta de app (app_usuarios). Es idempotente:
+  // al paciente de clínica no le cambia nada, al independiente le guarda el
+  // nombre la primera vez y a partir de ahí lo respeta.
+  await supabase.rpc('mi_cuenta_crear', { p_nombre: nombre?.slice(0, 80) ?? null })
 
   const destino = request.nextUrl.clone()
   destino.pathname = '/mi'

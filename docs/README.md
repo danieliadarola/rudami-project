@@ -10,6 +10,9 @@ Se escriben al cerrar un bloque grande, no en cada commit. La forma está en
   blanca de columnas, dos puertas en el proxy, animación de scroll a 0 KB.
 - [02 · La pantalla de progreso](02-progreso.md) — abrir las métricas del fisio
   con lista blanca, dos series en un eje, tono que informa sin juzgar.
+- [03 · La app v2: Free, Premium y Clinic](03-app-v2-free-premium-clinic.md) —
+  cuenta para todos, biblioteca de programas con la forma de la guía, puertas
+  de Premium en SQL, calendario propio y dos chats con un historial.
 
 ---
 

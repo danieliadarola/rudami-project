@@ -11,19 +11,19 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Mi recuperación · RuDaMi',
-  description: 'Tu plan de ejercicios, tu progreso y tu contacto con la clínica.',
+  title: 'RuDaMi',
+  description: 'Rutinas de ejercicios, cómo hacerlos, tus sesiones y tu progreso. Con tu clínica o por tu cuenta.',
   // Necesario para que iOS trate la web como app al añadirla a la pantalla de
   // inicio (la vía de instalación en iPhone, donde no hay prompt automático).
   appleWebApp: {
     capable: true,
-    title: 'Mi recuperación',
+    title: 'RuDaMi',
     statusBarStyle: 'default',
   },
 }
 
 export const viewport = {
-  themeColor: '#16181f',
+  themeColor: '#1f6b5c',
   // Sin zoom máximo: la accesibilidad manda. Un paciente con dolor cervical
   // agradece poder ampliar el texto.
   width: 'device-width',
