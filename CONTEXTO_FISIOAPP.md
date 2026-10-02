@@ -134,11 +134,25 @@ la clínica, service worker, iconos y keep-alive por cron de Vercel: hechos.)
 - **Plan**: endpoint `POST /api/admin/fisios` con `service_role` que (a) verifica que quien llama es admin, (b) toma el `clinica_id` del perfil del llamante y **nunca del body**, (c) crea el usuario con `auth.admin.createUser({ email_confirm: true })` desde el servidor, (d) inserta el perfil saltando RLS a propósito, (e) muestra errores reales, (f) asigna un color libre. Así **no hace falta añadir policy de INSERT** a `perfiles`.
 - **BLOQUEADO POR**: falta `SUPABASE_SERVICE_ROLE_KEY` en `.env.local` y en Vercel. Copiarla de Settings → API Keys. **Sin el prefijo `NEXT_PUBLIC_`**: con él acabaría en el bundle del navegador y expondría toda la base saltándose la RLS.
 
+**Limpieza hecha el 02/10/2026 (dos commits):**
+- ~~Código muerto~~ **hecho.** Fuera 7 componentes sin usar y la ruta legacy de
+  sesión. Fuera también `recharts`, `@react-pdf/renderer`, `html2canvas` y
+  `@anthropic-ai/sdk`: 21,5 MB de `node_modules` y `recharts` ya no viaja al
+  navegador. Se verificó uno a uno qué seguía vivo: `SesionCard` y
+  `BotonCerrarEpisodio` los usa la ficha del paciente, y `SesionCard` arrastra
+  `BotonPDF` (que carga `jspdf` solo al pulsarlo) y `BotonEliminarSesion`.
+- ~~165 errores de ESLint~~ **cero.** Los de lógica se arreglaron de verdad
+  (`Date.now()` en el render, un hook tras un `return`, inputs con `value=null`,
+  dependencias inestables). Los 132 `any` se sustituyeron por tipos reales:
+  `app/lib/tipos-db.ts` (las nueve tablas) y `app/lib/voz.ts` (la API de voz del
+  navegador). Detalle en el mensaje del commit.
+
 **Deuda de fondo (nada urgente, por orden de valor):**
 - Sin tests ni CI. Vercel construye directo de `main`.
-- 165 errores de ESLint (139 `no-explicit-any`, 13 `react-hooks/set-state-in-effect` — estos importan porque `reactCompiler` está activado).
-- 21 de 27 páginas son `'use client'`; datos clínicos viajando por el cliente pudiendo ir por SSR.
-- Cluster de 6 componentes muertos en `app/components/` (nadie entra desde fuera): `EpisodioCard` → `GraficaEVA`, `ListaPacientes` → `MenuPaciente`, `BotonEliminarPaciente`, `BotonEliminarCita`. Con ellos se va `recharts`. Sobran también `@react-pdf/renderer` (0 usos) y la ruta legacy `app/pacientes/[id]/sesion/`.
+- 21 de 27 páginas son `'use client'`; datos clínicos viajando por el cliente
+  pudiendo ir por SSR. Es la deuda grande que queda, y arreglarla también
+  borraría `app/lib/useCargarAlMontar.ts`, que existe solo para centralizar el
+  aviso que genera ese patrón.
 - Verificar las demos en pantalla: el copiloto en vivo y el asistente están probados por API, no visualmente. Tampoco se ha revisado visualmente el modo oscuro ni `/configuracion`.
 - Miguel y Rui comparten color (`#f59e0b`) y la agenda distingue fisios por color.
 
