@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/app/lib/supabase'
+import { useCargarAlMontar } from '@/app/lib/useCargarAlMontar'
 import { AppShell } from '@/components/layout/AppShell'
 import { DI } from '@/components/ui/DashboardIcons'
 import { SolicitudesCitas } from '@/components/citas/SolicitudesCitas'
@@ -14,6 +15,8 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import listPlugin from '@fullcalendar/list'
 import interactionPlugin from '@fullcalendar/interaction'
 import esLocale from '@fullcalendar/core/locales/es'
+import type { DateSelectArg, EventClickArg, EventContentArg, EventDropArg } from '@fullcalendar/core'
+import type { DateClickArg, EventResizeDoneArg } from '@fullcalendar/interaction'
 
 interface Fisio { id: string; nombre: string; apellidos: string; color: string; rol: string }
 interface TipoCita { id: string; nombre: string; color: string; duracion_min: number }
@@ -36,7 +39,7 @@ const hm  = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.ge
 
 export default function Calendario() {
   const router = useRouter()
-  const calRef = useRef<any>(null)
+  const calRef = useRef<FullCalendar | null>(null)
   const [fisios, setFisios] = useState<Fisio[]>([])
   const [tipos, setTipos] = useState<TipoCita[]>([])
   const [fisiosFiltrados, setFisiosFiltrados] = useState<string[]>([])
@@ -83,7 +86,7 @@ export default function Calendario() {
     setLoading(false)
   }
 
-  useEffect(() => { cargar() }, [])
+  useCargarAlMontar(cargar)
 
   const toggleFisio = (id: string) =>
     setFisiosFiltrados(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id])
@@ -120,23 +123,29 @@ export default function Calendario() {
   const findCita = (id: string) => citas.find(c => c.id === id) || null
 
   // Drag & resize → persistir
-  const persistir = async (id: string, patch: Partial<Cita>, evt?: any) => {
+  // `evt` solo se usa para deshacer el arrastre si la base rechaza el cambio.
+  const persistir = async (id: string, patch: Partial<Cita>, evt?: { revert: () => void }) => {
     const { error } = await supabase.from('citas').update(patch).eq('id', id)
     if (error) { evt?.revert?.(); alert('No se pudo actualizar la cita.'); return }
     setCitas(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c))
   }
-  const handleDrop = (info: any) =>
+  const handleDrop = (info: EventDropArg) => {
+    // FullCalendar da las fechas como Date|null; sin evento no hay nada que guardar.
+    if (!info.event.start) { info.revert(); return }
     persistir(info.event.id, { fecha_hora: info.event.start.toISOString() }, info)
-  const handleResize = (info: any) => {
-    const dur = Math.round((info.event.end - info.event.start) / 60000)
+  }
+  const handleResize = (info: EventResizeDoneArg) => {
+    const { start, end } = info.event
+    if (!start || !end) { info.revert(); return }
+    const dur = Math.round((end.getTime() - start.getTime()) / 60000)
     persistir(info.event.id, { duracion_min: dur }, info)
   }
-  const handleSelect = (info: any) => {
-    const dur = Math.round((info.end - info.start) / 60000)
+  const handleSelect = (info: DateSelectArg) => {
+    const dur = Math.round((info.end.getTime() - info.start.getTime()) / 60000)
     router.push(`/citas/nueva?fecha=${ymd(info.start)}&hora=${hm(info.start)}&dur=${dur}`)
   }
-  const handleDateClick = (info: any) => {
-    const d = info.date as Date
+  const handleDateClick = (info: DateClickArg) => {
+    const d = info.date
     router.push(`/citas/nueva?fecha=${ymd(d)}&hora=${hm(d)}`)
   }
 
@@ -207,7 +216,7 @@ export default function Calendario() {
                 <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px' }}>
                   <span style={{ width: 10, height: 10, borderRadius: 3, background: t.color, flexShrink: 0 }} />
                   <span style={{ fontSize: 12, color: 'var(--ink-2)', flex: 1 }}>{t.nombre}</span>
-                  <span style={{ fontSize: 10.5, color: 'var(--faint)' }}>{t.duracion_min}'</span>
+                  <span style={{ fontSize: 10.5, color: 'var(--faint)' }}>{t.duracion_min}&apos;</span>
                 </div>
               ))}
               {tipos.length === 0 && <p style={{ fontSize: 11.5, color: 'var(--faint)', padding: '4px 8px' }}>Sin tipos definidos.</p>}
@@ -260,12 +269,12 @@ export default function Calendario() {
               dateClick={handleDateClick}
               eventDrop={handleDrop}
               eventResize={handleResize}
-              eventClick={(info: any) => { info.jsEvent.preventDefault(); setSel(findCita(info.event.id)) }}
+              eventClick={(info: EventClickArg) => { info.jsEvent.preventDefault(); setSel(findCita(info.event.id)) }}
               height="100%"
               expandRows
               slotDuration="00:15:00"
               slotLabelInterval="01:00:00"
-              eventContent={(arg: any) => {
+              eventContent={(arg: EventContentArg) => {
                 const p = arg.event.extendedProps
                 const est = ESTADO[p.estado] ?? ESTADO.pendiente
                 return (

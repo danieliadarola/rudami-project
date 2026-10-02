@@ -4,7 +4,6 @@
 // Coexiste con FullCalendar en /citas sin conflicto
 
 import { useState, useEffect } from 'react'
-import { DI } from '@/components/ui/DashboardIcons'
 
 export interface Fisio {
   id: string

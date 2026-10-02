@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/app/lib/supabase-server'
 import { generarInforme } from '@/app/lib/ai'
+import type { EjercicioGuia, MensajeChat } from '@/app/lib/paciente/tipos'
 
 export async function POST(request: Request) {
   try {
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
       paciente: data.paciente?.nombre,
       resumen: i.resumen, explicacion: i.explicacion,
       que_esperar: i.que_esperar, recomendaciones: i.recomendaciones,
-      ejercicios: (data.ejercicios ?? []).map((e: any) => ({
+      ejercicios: (data.ejercicios ?? []).map((e: EjercicioGuia) => ({
         nombre: e.nombre, instrucciones: e.instrucciones, series: e.series,
         repeticiones: e.repeticiones, frecuencia: e.frecuencia, descanso: e.descanso,
         errores: e.errores, consejos: e.consejos, nota: e.nota,
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
       faq: i.faq ?? null,
     }
     const historial = (data.chat ?? []).slice(-8)
-      .map((m: any) => `${m.rol === 'paciente' ? 'Paciente' : 'Asistente'}: ${m.texto}`).join('\n')
+      .map((m: MensajeChat) => `${m.rol === 'paciente' ? 'Paciente' : 'Asistente'}: ${m.texto}`).join('\n')
 
     // 3) Generar respuesta con guardarraíles
     const resultado = await generarInforme('guia_chat', {

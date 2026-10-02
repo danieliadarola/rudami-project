@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/app/lib/supabase'
+import { useCargarAlMontar } from '@/app/lib/useCargarAlMontar'
 import { AppShell } from '@/components/layout/AppShell'
 import { MapaMuscular } from '@/components/guia/MapaMuscular'
 import { normalizarMusculos } from '@/app/lib/musculos'
@@ -17,12 +18,12 @@ export default function EjerciciosPage() {
   const router = useRouter()
   const [esAdmin, setEsAdmin] = useState<boolean | null>(null)
   const [clinicaId, setClinicaId] = useState<string | null>(null)
-  const [lista, setLista] = useState<any[]>([])
+  const [lista, setLista] = useState<Ej[]>([])
   const [f, setF] = useState<Ej>(VACIO)
   const [guardando, setGuardando] = useState(false)
   const [buscar, setBuscar] = useState('')
   const [zonaFiltro, setZonaFiltro] = useState('')
-  const set = (k: keyof Ej, v: any) => setF(p => ({ ...p, [k]: v }))
+  const set = <K extends keyof Ej>(k: K, v: Ej[K]) => setF(p => ({ ...p, [k]: v }))
 
   const cargar = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -32,7 +33,7 @@ export default function EjerciciosPage() {
     const { data } = await supabase.from('ejercicios').select('*').eq('clinica_id', p?.clinica_id).order('zona')
     setLista(data ?? [])
   }, [router])
-  useEffect(() => { cargar() }, [cargar])
+  useCargarAlMontar(cargar)
 
   const zonas = Array.from(new Set(lista.map(e => e.zona).filter(Boolean))).sort()
   const listaFiltrada = lista.filter(e =>
@@ -87,7 +88,7 @@ export default function EjerciciosPage() {
                   <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ink)' }}>{e.nombre}</div>
                   <div style={{ fontSize: 12, color: 'var(--muted)' }}>{e.zona || '—'} · {e.nivel}{e.video_url && ' · ▶ vídeo'}</div>
                 </div>
-                <button className="btn-line danger" onClick={ev => { ev.stopPropagation(); eliminar(e.id) }}>×</button>
+                <button className="btn-line danger" onClick={ev => { ev.stopPropagation(); if (e.id) eliminar(e.id) }}>×</button>
               </div>
               )
             })}
@@ -115,7 +116,7 @@ export default function EjerciciosPage() {
                   <MapaMuscular activos={grupos} modo="completo" alto={110} leyenda />
                 </div>
               ) : (
-                <p style={{ marginTop: -6, marginBottom: 12, fontSize: 11.5, color: 'var(--warn, #d97706)' }}>No se reconoce ningún grupo muscular en ese texto: el paciente no verá mapa. Usa nombres como "glúteo", "cuádriceps", "paravertebrales"…</p>
+                <p style={{ marginTop: -6, marginBottom: 12, fontSize: 11.5, color: 'var(--warn, #d97706)' }}>No se reconoce ningún grupo muscular en ese texto: el paciente no verá mapa. Usa nombres como &quot;glúteo&quot;, &quot;cuádriceps&quot;, &quot;paravertebrales&quot;…</p>
               )
             })()}
             <div className="form-grid-2" style={{ marginBottom: 12 }}>

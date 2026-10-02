@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/app/lib/supabase'
+import type { Perfil } from '@/app/lib/tipos-db'
 import { AppShell } from '@/components/layout/AppShell'
 
 export default function NuevoPaciente() {
@@ -10,7 +11,7 @@ export default function NuevoPaciente() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [esAdmin, setEsAdmin] = useState(false)
-  const [fisios, setFisios] = useState<any[]>([])
+  const [fisios, setFisios] = useState<Pick<Perfil, 'id' | 'nombre' | 'apellidos' | 'rol'>[]>([])
   const [clinicaId, setClinicaId] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [form, setForm] = useState({

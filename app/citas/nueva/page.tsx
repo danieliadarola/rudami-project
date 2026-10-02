@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/app/lib/supabase'
 import { AppShell } from '@/components/layout/AppShell'
+import type { Paciente } from '@/app/lib/tipos-db'
 
 interface TipoCita { id: string; nombre: string; color: string; duracion_min: number }
 
@@ -14,7 +15,7 @@ function NuevaCitaForm() {
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [pacientes, setPacientes] = useState<any[]>([])
+  const [pacientes, setPacientes] = useState<Pick<Paciente, 'id' | 'nombre' | 'apellidos'>[]>([])
   const [tipos, setTipos] = useState<TipoCita[]>([])
   const [durTocada, setDurTocada] = useState(false)
   const [form, setForm] = useState({
@@ -56,8 +57,9 @@ function NuevaCitaForm() {
     cargar()
   }, [reprogramarId])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
+  // Separado del evento para que las tarjetas de tipo de cita puedan usarlo
+  // sin fabricar un evento falso.
+  const aplicarCampo = (name: string, value: string) => {
     if (name === 'duracion_min') setDurTocada(true)
     if (name === 'tipo_id') {
       const t = tipos.find(x => x.id === value)
@@ -66,6 +68,9 @@ function NuevaCitaForm() {
     }
     setForm(f => ({ ...f, [name]: value }))
   }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+    aplicarCampo(e.target.name, e.target.value)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -125,7 +130,7 @@ function NuevaCitaForm() {
                 <button
                   type="button"
                   key={t.id}
-                  onClick={() => handleChange({ target: { name: 'tipo_id', value: t.id } } as any)}
+                  onClick={() => aplicarCampo('tipo_id', t.id)}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 7,
                     padding: '7px 12px', borderRadius: 9, cursor: 'pointer', fontFamily: 'inherit',
@@ -137,7 +142,7 @@ function NuevaCitaForm() {
                 >
                   <span style={{ width: 9, height: 9, borderRadius: 3, background: t.color }} />
                   {t.nombre}
-                  <span style={{ fontSize: 11, color: 'var(--faint)' }}>{t.duracion_min}'</span>
+                  <span style={{ fontSize: 11, color: 'var(--faint)' }}>{t.duracion_min}&apos;</span>
                 </button>
               )
             })}

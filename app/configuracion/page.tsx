@@ -28,7 +28,10 @@ export default async function ConfiguracionPage() {
   if (!user) redirect('/')
   const { data: perfil } = await supabase.from('perfiles').select('rol, clinicas(nombre)').eq('id', user.id).single()
   const esAdmin = perfil?.rol === 'admin'
-  const clinica = (perfil as any)?.clinicas?.nombre as string | undefined
+  // Supabase declara la tabla anidada como lista aunque un perfil tenga UNA
+  // clinica; en ejecucion llega un objeto.
+  const conClinica = perfil as unknown as { clinicas?: { nombre?: string } } | null
+  const clinica = conClinica?.clinicas?.nombre
 
   return (
     <AppShell>

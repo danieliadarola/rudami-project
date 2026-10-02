@@ -2,9 +2,11 @@
 // app/dashboard/page.tsx — Dashboard v3 "Quiet Precision"
 // Lógica clínica: pacientes con episodio activo, altas del mes, banderas multifactor.
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/app/lib/supabase'
+import { useCargarAlMontar } from '@/app/lib/useCargarAlMontar'
+import type { Cita, Paciente, Perfil as PerfilDB } from '@/app/lib/tipos-db'
 
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
@@ -27,9 +29,19 @@ interface Perfil {
 
 const DIA_MS = 86_400_000
 
-function agruparPorSemana(sesiones: { fecha: string }[]): ActividadRow[] {
+/** Forma exacta de lo que piden las consultas de esta pantalla. Las tablas
+ *  relacionadas llegan anidadas bajo el nombre de la tabla. Supabase las
+ *  declara como lista aunque una cita tenga UN paciente y UN fisio; en
+ *  ejecucion llega un objeto, de ahi el paso por `unknown` al convertir. */
+type CitaHoyRaw = Pick<Cita, 'id' | 'fecha_hora' | 'duracion_min' | 'estado' | 'notas'> & {
+  pacientes: Pick<Paciente, 'id' | 'nombre' | 'apellidos' | 'telefono'> | null
+  perfiles: Pick<PerfilDB, 'id' | 'nombre' | 'apellidos' | 'color'> | null
+}
+
+function agruparPorSemana(sesiones: { fecha: string | null }[]): ActividadRow[] {
   const map = new Map<string, { sesiones: number; citas: number }>()
   sesiones.forEach(s => {
+    if (!s.fecha) return
     const d   = new Date(s.fecha)
     const lun = new Date(d)
     lun.setDate(d.getDate() - ((d.getDay() + 6) % 7))
@@ -95,11 +107,11 @@ export default function DashboardPage() {
       supabase.from('pacientes').select('id, nombre, apellidos').eq('clinica_id', cid),
     ])
 
-    const episodios = (episodiosRaw ?? []) as any[]
-    const sesiones  = (sesRaw ?? []) as any[]
+    const episodios = episodiosRaw ?? []
+    const sesiones  = sesRaw ?? []
 
     // Transformar citas de hoy
-    const citasT = ((citasRaw ?? []) as any[]).map(c => ({
+    const citasT = ((citasRaw ?? []) as unknown as CitaHoyRaw[]).map(c => ({
       id:           c.id as string,
       hora:         new Date(c.fecha_hora).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false }),
       duracion_min: c.duracion_min as number,
@@ -124,7 +136,7 @@ export default function DashboardPage() {
     ).length
 
     const sesSemana = sesiones.filter(
-      s => new Date(s.fecha) >= new Date(Date.now() - 7 * DIA_MS),
+      s => s.fecha && new Date(s.fecha) >= new Date(Date.now() - 7 * DIA_MS),
     ).length
 
     setStats([
@@ -137,7 +149,7 @@ export default function DashboardPage() {
     setActividad(agruparPorSemana(sesiones))
 
     // ── Carga del equipo ──
-    const eqT: CargaFisio[] = ((equipoRaw ?? []) as any[]).map(f => {
+    const eqT: CargaFisio[] = (equipoRaw ?? []).map(f => {
       const suyas      = citasT.filter(c => c.fisio_id === f.id)
       const reservados = suyas.reduce((s, c) => s + c.duracion_min, 0)
       const sesSem     = sesiones.filter(
@@ -156,16 +168,16 @@ export default function DashboardPage() {
     setBanderas(construirBanderas({
       episodios,
       sesiones,
-      citas:     (citasHistRaw ?? []) as any[],
-      pacientes: (pacientesRaw ?? []) as any[],
-      fisios:    ((equipoRaw ?? []) as any[]).map(f => ({ id: f.id, nombre: f.nombre, color: f.color })),
+      citas:     citasHistRaw ?? [],
+      pacientes: pacientesRaw ?? [],
+      fisios:    (equipoRaw ?? []).map(f => ({ id: f.id, nombre: f.nombre ?? '', color: f.color ?? '' })),
       hoy,
     }))
 
     setCargando(false)
   }, [router])
 
-  useEffect(() => { cargar() }, [cargar])
+  useCargarAlMontar(cargar)
 
   async function confirmarCita(id: string) {
     await supabase.from('citas').update({ estado: 'confirmada' }).eq('id', id)

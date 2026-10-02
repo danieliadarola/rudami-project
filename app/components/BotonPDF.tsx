@@ -1,33 +1,17 @@
 'use client'
 
 import { useState } from 'react'
+import type { Paciente, Sesion, Perfil } from '@/app/lib/tipos-db'
 
 interface Props {
-  paciente: {
-    nombre: string
-    apellidos: string
-    fecha_nacimiento: string
-    telefono: string
-    email: string
-    genero: string
-    ocupacion: string
-    motivo_consulta: string
-    antecedentes: string
-  }
-  sesion: {
-    fecha: string
-    anamnesis: string
-    exploracion_fisica: string
-    dolor_eva: number
-    notas: string
-    diagnostico_ia: string
-    derivacion?: boolean
-  }
-  fisio?: {
-    nombre?: string
-    apellidos?: string
-    numero_colegiado?: string
-  }
+  // Las columnas de Postgres admiten null; el PDF ya pinta '—' donde falte.
+  paciente: Pick<Paciente,
+    'nombre' | 'apellidos' | 'fecha_nacimiento' | 'telefono' | 'email'
+    | 'genero' | 'ocupacion' | 'motivo_consulta' | 'antecedentes'>
+  sesion: Pick<Sesion,
+    'fecha' | 'anamnesis' | 'exploracion_fisica' | 'dolor_eva' | 'notas'
+    | 'diagnostico_ia' | 'derivacion'>
+  fisio?: Pick<Perfil, 'nombre' | 'apellidos' | 'numero_colegiado'> | null
 }
 
 // Extractor robusto: corta desde el título hasta el siguiente **TÍTULO**.

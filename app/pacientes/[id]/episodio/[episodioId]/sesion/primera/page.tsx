@@ -2,9 +2,12 @@
 // Nueva sesión unificada: 3 modos en tarjetas, formulario dinámico, EVA slider,
 // informe IA al guardar y descuento automático del bono.
 
-import { useState, use, useEffect } from 'react'
+import { useState, use, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/app/lib/supabase'
+import { useCargarAlMontar } from '@/app/lib/useCargarAlMontar'
+import type { Paciente, Episodio, Perfil } from '@/app/lib/tipos-db'
+import type { CopilotoOutput, ExtraccionOutput } from '@/app/lib/ai'
 import { AppShell } from '@/components/layout/AppShell'
 import { DI } from '@/components/ui/DashboardIcons'
 import { EvaSlider } from '@/components/sesion/EvaSlider'
@@ -20,19 +23,20 @@ const MODOS: { key: Modo; icon: 'file' | 'history' | 'zap'; titulo: string; desc
   { key: 'rapida',      icon: 'zap',     titulo: 'Sesión rápida',      desc: 'Registro breve de una intervención puntual.' },
 ]
 
-const TA = (props: any) => <textarea {...props} rows={props.rows ?? 3} className="form-textarea" />
+const TA = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) =>
+  <textarea {...props} rows={props.rows ?? 3} className="form-textarea" />
 
 export default function NuevaSesion({ params }: { params: Promise<{ id: string; episodioId: string }> }) {
   const { id, episodioId } = use(params)
   const router = useRouter()
 
-  const [paciente, setPaciente] = useState<any>(null)
-  const [episodio, setEpisodio] = useState<any>(null)
-  const [fisio, setFisio] = useState<any>(null)
+  const [paciente, setPaciente] = useState<Paciente | null>(null)
+  const [episodio, setEpisodio] = useState<Pick<Episodio, 'titulo' | 'user_id'> | null>(null)
+  const [fisio, setFisio] = useState<Pick<Perfil, 'nombre' | 'apellidos' | 'color'> | null>(null)
   const [modo, setModo] = useState<Modo>('completa')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [copiloto, setCopiloto] = useState<any>(null)
+  const [copiloto, setCopiloto] = useState<CopilotoOutput | null>(null)
   const [analizando, setAnalizando] = useState(false)
   const [avisoIA, setAvisoIA] = useState<string | null>(null)
 
@@ -42,24 +46,28 @@ export default function NuevaSesion({ params }: { params: Promise<{ id: string; 
     derivacion_texto: '', dolor_eva: 5,
     movilidad: 5, fuerza: 5, rigidez: 5, fatiga: 5, sueno: 5, adherencia: 5,
   })
-  const set = (k: string, v: any) => setF(prev => ({ ...prev, [k]: v }))
+  type Campo = typeof f
+  const set = <K extends keyof Campo>(k: K, v: Campo[K]) => setF(prev => ({ ...prev, [k]: v }))
 
-  useEffect(() => {
-    const cargar = async () => {
-      const { data: pac } = await supabase.from('pacientes').select('*').eq('id', id).single()
-      setPaciente(pac)
-      const { data: ep } = await supabase.from('episodios').select('titulo, user_id').eq('id', episodioId).single()
-      setEpisodio(ep)
-      if (ep?.user_id) {
-        const { data: pf } = await supabase.from('perfiles').select('nombre, apellidos, color').eq('id', ep.user_id).single()
-        setFisio(pf)
-      }
+  const cargar = useCallback(async () => {
+    const { data: pac } = await supabase.from('pacientes').select('*').eq('id', id).single()
+    setPaciente(pac)
+    const { data: ep } = await supabase.from('episodios').select('titulo, user_id').eq('id', episodioId).single()
+    setEpisodio(ep)
+    if (ep?.user_id) {
+      const { data: pf } = await supabase.from('perfiles').select('nombre, apellidos, color').eq('id', ep.user_id).single()
+      setFisio(pf)
     }
-    cargar()
   }, [id, episodioId])
+  useCargarAlMontar(cargar)
 
   // Copiloto en vivo: analiza con debounce cuando hay contenido suficiente.
   useEffect(() => {
+    // Limpiar la sugerencia cuando el texto se queda corto si es un setState
+    // sincrono, pero es el unico modo de retirar algo que ya se pinto. Lo
+    // ideal seria derivar la sugerencia en vez de guardarla en estado; queda
+    // apuntado para cuando esta pantalla se reordene.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!paciente || f.anamnesis.trim().length < 12) { setCopiloto(null); return }
     const t = setTimeout(async () => {
       setAnalizando(true)
@@ -164,7 +172,7 @@ export default function NuevaSesion({ params }: { params: Promise<{ id: string; 
     router.push(`/pacientes/${id}`)
   }
 
-  const rellenarDesdeIA = (e: any) => {
+  const rellenarDesdeIA = (e: ExtraccionOutput) => {
     setF(prev => ({
       ...prev,
       anamnesis: e.anamnesis || prev.anamnesis,
@@ -201,7 +209,7 @@ export default function NuevaSesion({ params }: { params: Promise<{ id: string; 
           {paciente && <strong style={{ color: 'var(--ink)', fontWeight: 600 }}>{paciente.nombre} {paciente.apellidos}</strong>}
           {episodio?.titulo && <> · {episodio.titulo}</>}
           {fisio && <> · <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: fisio.color, display: 'inline-block' }} />
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: fisio.color ?? 'var(--accent)', display: 'inline-block' }} />
             {fisio.nombre} {fisio.apellidos}</span></>}
         </p>
 
@@ -223,16 +231,16 @@ export default function NuevaSesion({ params }: { params: Promise<{ id: string; 
         {/* Anamnesis / Motivo */}
         <div className="form-section-h">{modo === 'rapida' ? 'Motivo de la consulta' : 'Anamnesis'}</div>
         <label className="form-label">{anamLabel}</label>
-        <TA id="campo-anamnesis" name="anamnesis" value={f.anamnesis} onChange={(e: any) => set('anamnesis', e.target.value)} rows={modo === 'rapida' ? 4 : 3} placeholder={anamPh} />
+        <TA id="campo-anamnesis" name="anamnesis" value={f.anamnesis} onChange={e => set('anamnesis', e.target.value)} rows={modo === 'rapida' ? 4 : 3} placeholder={anamPh} />
 
         {showAntecedentes && (
           <>
             <div className="form-section-h">Antecedentes</div>
             <label className="form-label">Antecedentes personales</label>
-            <TA id="campo-antecedentes" value={f.antecedentes_personales} onChange={(e: any) => set('antecedentes_personales', e.target.value)} placeholder="Patologías previas, cirugías, medicación, hábitos…" />
+            <TA id="campo-antecedentes" value={f.antecedentes_personales} onChange={e => set('antecedentes_personales', e.target.value)} placeholder="Patologías previas, cirugías, medicación, hábitos…" />
             <div style={{ height: 14 }} />
             <label className="form-label">Antecedentes familiares · opcional</label>
-            <TA id="campo-antecedentes_familiares" value={f.antecedentes_familiares} onChange={(e: any) => set('antecedentes_familiares', e.target.value)} rows={2} placeholder="Antecedentes familiares relevantes…" />
+            <TA id="campo-antecedentes_familiares" value={f.antecedentes_familiares} onChange={e => set('antecedentes_familiares', e.target.value)} rows={2} placeholder="Antecedentes familiares relevantes…" />
           </>
         )}
 
@@ -240,12 +248,12 @@ export default function NuevaSesion({ params }: { params: Promise<{ id: string; 
           <>
             <div className="form-section-h">Exploración física</div>
             <label className="form-label">Hallazgos de la exploración</label>
-            <TA id="campo-exploracion_fisica" value={f.exploracion_fisica} onChange={(e: any) => set('exploracion_fisica', e.target.value)} placeholder="Inspección, palpación, rango de movilidad, fuerza, postura…" />
+            <TA id="campo-exploracion_fisica" value={f.exploracion_fisica} onChange={e => set('exploracion_fisica', e.target.value)} placeholder="Inspección, palpación, rango de movilidad, fuerza, postura…" />
             {showTests && (
               <>
                 <div style={{ height: 14 }} />
                 <label className="form-label">Tests y pruebas específicas · opcional</label>
-                <TA id="campo-tests_ortopedicos" value={f.tests_ortopedicos} onChange={(e: any) => set('tests_ortopedicos', e.target.value)} rows={2} placeholder="Tests ortopédicos, escalas funcionales, mediciones…" />
+                <TA id="campo-tests_ortopedicos" value={f.tests_ortopedicos} onChange={e => set('tests_ortopedicos', e.target.value)} rows={2} placeholder="Tests ortopédicos, escalas funcionales, mediciones…" />
               </>
             )}
           </>

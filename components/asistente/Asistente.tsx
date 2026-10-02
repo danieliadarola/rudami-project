@@ -4,6 +4,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { DI } from '@/components/ui/DashboardIcons'
+import { constructorVoz, type ReconocimientoVoz, type EventoVoz } from '@/app/lib/voz'
+
+/** Accion destructiva que el asistente propone y el fisio debe confirmar. */
+interface AccionPendiente { name: string; args: Record<string, unknown> }
 
 interface Msg { role: 'user' | 'assistant'; content: string }
 const SUGERENCIAS = ['¿Qué citas tengo hoy?', 'Agenda a Elena Castro mañana a las 10', 'Huecos libres del jueves', 'Busca a Hugo']
@@ -26,17 +30,22 @@ export function Asistente({ open, onClose }: { open: boolean; onClose: () => voi
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [pendiente, setPendiente] = useState<any>(null)
+  const [pendiente, setPendiente] = useState<AccionPendiente | null>(null)
   const [escuchando, setEscuchando] = useState(false)
   const [vozOn, setVozOn] = useState(false)
   const [pasos, setPasos] = useState<string[]>([])
   const [pasosVistos, setPasosVistos] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const recRef = useRef<any>(null)
-  const typingRef = useRef<any>(null)
+  const recRef = useRef<ReconocimientoVoz | null>(null)
+  const typingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [typing, setTyping] = useState(false)
 
   useEffect(() => { scrollRef.current?.scrollTo({ top: 9e9 }) }, [messages, loading, pendiente])
+  // Leer localStorage solo es posible tras hidratar, así que esto es
+  // exactamente para lo que existe useEffect. La regla del compilador es
+  // conservadora con cualquier setState en un efecto; aquí el coste es un
+  // único render extra al montar, inevitable al leer del navegador.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { try { if (localStorage.getItem('rudami-voz') === '1') setVozOn(true) } catch {} }, [])
 
   const hablar = (txt: string) => {
@@ -58,7 +67,7 @@ export function Asistente({ open, onClose }: { open: boolean; onClose: () => voi
         copy[copy.length - 1] = { role: 'assistant', content: texto.slice(0, i) }
         return copy
       })
-      if (i >= texto.length) { clearInterval(typingRef.current); typingRef.current = null; setTyping(false) }
+      if (i >= texto.length) { if (typingRef.current) clearInterval(typingRef.current); typingRef.current = null; setTyping(false) }
     }, 30)
   }
 
@@ -110,11 +119,11 @@ export function Asistente({ open, onClose }: { open: boolean; onClose: () => voi
   }
 
   const escuchar = () => {
-    const SR = (typeof window !== 'undefined') && ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
+    const SR = constructorVoz()
     if (!SR) { alert('Tu navegador no soporta dictado por voz. Prueba con Chrome.'); return }
     if (escuchando) { recRef.current?.stop(); return }
     const rec = new SR(); rec.lang = 'es-ES'; rec.interimResults = false; rec.maxAlternatives = 1
-    rec.onresult = (e: any) => { const txt = e.results[0][0].transcript; setInput(txt); enviar(txt) }
+    rec.onresult = (e: EventoVoz) => { const txt = e.results[0][0].transcript; setInput(txt); enviar(txt) }
     rec.onerror = () => setEscuchando(false)
     rec.onend = () => setEscuchando(false)
     rec.start(); setEscuchando(true); recRef.current = rec

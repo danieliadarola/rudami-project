@@ -1,14 +1,28 @@
 'use client'
 
-import { useState, use, useEffect, useCallback } from 'react'
+import { useState, use, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/app/lib/supabase'
+import { useCargarAlMontar } from '@/app/lib/useCargarAlMontar'
 import Link from 'next/link'
 import { AppShell } from '@/components/layout/AppShell'
+import type { Informe, InformeEjercicio, MetricasInforme, Ejercicio, Paciente, Sesion } from '@/app/lib/tipos-db'
+
+/** Un ejercicio del informe mientras se edita: los que se acaban de anadir
+ *  desde la biblioteca todavia no tienen id ni informe_id, los pone Postgres
+ *  al guardar. */
+type EjercicioBorrador = Omit<InformeEjercicio, 'id' | 'informe_id' | 'orden'>
+  & { id?: string; informe_id?: string; orden?: number | null }
+
+interface ActividadGuia {
+  checks: { informe_ejercicio_id: string; fecha: string }[]
+  checkins: { fecha: string; dolor: number }[]
+  chat: { rol: string; texto: string; created_at: string }[]
+}
 
 /** Resumen para el fisio de lo que el paciente hace en casa con su guía:
  *  adherencia (checks), dolor reportado y últimas dudas del chat. */
-function ActividadPaciente({ actividad, totalEjercicios, metricas }: { actividad: { checks: any[]; checkins: any[]; chat: any[] }; totalEjercicios: number; metricas: any }) {
+function ActividadPaciente({ actividad, totalEjercicios, metricas }: { actividad: ActividadGuia; totalEjercicios: number; metricas: MetricasInforme | null }) {
   const hoy = new Date()
   const dias7 = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(hoy.getTime() - (6 - i) * 86400000)
@@ -57,7 +71,7 @@ function ActividadPaciente({ actividad, totalEjercicios, metricas }: { actividad
   )
 }
 
-const METRICAS: { k: string; l: string }[] = [
+const METRICAS: { k: keyof MetricasInforme; l: string }[] = [
   { k: 'dolor_ini', l: 'Dolor inicial' }, { k: 'dolor_fin', l: 'Dolor final' },
   { k: 'movilidad', l: 'Movilidad' }, { k: 'fuerza', l: 'Fuerza' },
   { k: 'rigidez', l: 'Rigidez' }, { k: 'fatiga', l: 'Fatiga' },
@@ -67,20 +81,22 @@ const METRICAS: { k: string; l: string }[] = [
 export default function EditorInforme({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
-  const [inf, setInf] = useState<any>(null)
-  const [pac, setPac] = useState<any>(null)
-  const [ses, setSes] = useState<any>(null)
-  const [lib, setLib] = useState<any[]>([])
-  const [ejs, setEjs] = useState<any[]>([])
+  const [inf, setInf] = useState<Informe | null>(null)
+  const [pac, setPac] = useState<Pick<Paciente, 'nombre' | 'apellidos' | 'motivo_consulta'> | null>(null)
+  const [ses, setSes] = useState<Pick<Sesion, 'dolor_eva' | 'hipotesis_principal' | 'anamnesis' | 'exploracion_fisica'> | null>(null)
+  const [lib, setLib] = useState<Ejercicio[]>([])
+  const [ejs, setEjs] = useState<EjercicioBorrador[]>([])
   const [gen, setGen] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [buscar, setBuscar] = useState('')
   const [link, setLink] = useState('')
-  const [actividad, setActividad] = useState<{ checks: any[]; checkins: any[]; chat: any[] } | null>(null)
+  const [actividad, setActividad] = useState<ActividadGuia | null>(null)
   const [tab, setTab] = useState<'sesion' | 'guia' | 'ejercicios' | 'notas'>('sesion')
 
-  const set = (k: string, v: any) => setInf((p: any) => ({ ...p, [k]: v }))
-  const setMet = (k: string, v: any) => setInf((p: any) => ({ ...p, metricas: { ...(p.metricas || {}), [k]: v } }))
+  const set = <K extends keyof Informe>(k: K, v: Informe[K]) =>
+    setInf(p => (p ? { ...p, [k]: v } : p))
+  const setMet = <K extends keyof MetricasInforme>(k: K, v: MetricasInforme[K]) =>
+    setInf(p => (p ? { ...p, metricas: { ...(p.metricas ?? {}), [k]: v } } : p))
 
   const cargar = useCallback(async () => {
     const { data: i } = await supabase.from('informes').select('*').eq('id', id).single()
@@ -109,7 +125,7 @@ export default function EditorInforme({ params }: { params: Promise<{ id: string
       setActividad({ checks: ck ?? [], checkins: ci ?? [], chat: ch ?? [] })
     }
   }, [id, router])
-  useEffect(() => { cargar() }, [cargar])
+  useCargarAlMontar(cargar)
 
   const generar = async () => {
     setGen(true)
@@ -118,12 +134,15 @@ export default function EditorInforme({ params }: { params: Promise<{ id: string
         body: JSON.stringify({ modo: 'informe_paciente', motivo_consulta: pac?.motivo_consulta, hipotesis_principal: ses?.hipotesis_principal, anamnesis: ses?.anamnesis, exploracion_fisica: ses?.exploracion_fisica, dolor_eva: inf?.metricas?.dolor_fin }) })
       const d = await r.json()
       const o = d.informe_paciente
-      if (o) setInf((p: any) => ({ ...p, resumen: o.resumen ?? p.resumen, explicacion: o.explicacion ?? p.explicacion, que_esperar: o.que_esperar ?? p.que_esperar, recomendaciones: o.recomendaciones ?? p.recomendaciones, motivacion: o.motivacion ?? p.motivacion }))
+      if (o) setInf(p => (p ? { ...p, resumen: o.resumen ?? p.resumen, explicacion: o.explicacion ?? p.explicacion, que_esperar: o.que_esperar ?? p.que_esperar, recomendaciones: o.recomendaciones ?? p.recomendaciones, motivacion: o.motivacion ?? p.motivacion } : p))
     } catch {}
     setGen(false)
   }
 
   const guardar = async (publicar = false) => {
+    // Solo se llega aqui con el informe ya cargado (la pantalla no se pinta
+    // hasta entonces), pero el tipo lo exige y asi no hay forma de colarse.
+    if (!inf) return
     setGuardando(true)
     await supabase.from('informes').update({
       tipo_sesion: inf.tipo_sesion, duracion_min: inf.duracion_min, numero_sesion: inf.numero_sesion, total_sesiones: inf.total_sesiones,
@@ -173,8 +192,9 @@ export default function EditorInforme({ params }: { params: Promise<{ id: string
     if (publicar) { set('estado', 'publicado'); setLink(`${window.location.origin}/r/${inf.token}`) }
   }
 
-  const addEj = (x: any) => setEjs(p => [...p, { nombre: x.nombre, instrucciones: x.instrucciones, musculos: x.musculos, nivel: x.nivel, errores: x.errores, consejos: x.consejos, imagen_url: x.imagen_url, gif_url: x.gif_url, video_url: x.video_url ?? '', nota: '', series: 3, repeticiones: '10', frecuencia: '1×/día', descanso: '30 s', duracion: '' }])
-  const setEj = (i: number, k: string, v: any) => setEjs(p => p.map((e, j) => j === i ? { ...e, [k]: v } : e))
+  const addEj = (x: Ejercicio) => setEjs(p => [...p, { nombre: x.nombre, instrucciones: x.instrucciones, musculos: x.musculos, nivel: x.nivel, errores: x.errores, consejos: x.consejos, imagen_url: x.imagen_url, gif_url: x.gif_url, video_url: x.video_url ?? '', nota: '', series: 3, repeticiones: '10', frecuencia: '1×/día', descanso: '30 s', duracion: '' }])
+  const setEj = <K extends keyof EjercicioBorrador>(i: number, k: K, v: EjercicioBorrador[K]) =>
+    setEjs(p => p.map((e, j) => (j === i ? { ...e, [k]: v } : e)))
   const delEj = (i: number) => setEjs(p => p.filter((_, j) => j !== i))
 
   if (!inf) return <AppShell><div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Cargando…</div></AppShell>
@@ -260,18 +280,18 @@ export default function EditorInforme({ params }: { params: Promise<{ id: string
           <div className="form-card-title" style={{ marginTop: 18 }}>Qué te ocurre (explicación sencilla)</div>
           <textarea className="form-textarea" rows={4} value={inf.explicacion ?? ''} onChange={e => set('explicacion', e.target.value)} />
           <div className="form-card-title" style={{ marginTop: 18 }}>¿Qué podemos esperar? (4 fases)</div>
-          {(inf.que_esperar ?? []).map((f: any, i: number) => (
+          {(inf.que_esperar ?? []).map((f, i) => (
             <div key={i} style={{ marginBottom: 10 }}>
-              <input className="form-input" style={{ marginBottom: 4, fontWeight: 600 }} value={f.titulo} onChange={e => set('que_esperar', inf.que_esperar.map((x: any, j: number) => j === i ? { ...x, titulo: e.target.value } : x))} />
-              <textarea className="form-textarea" rows={2} value={f.descripcion} onChange={e => set('que_esperar', inf.que_esperar.map((x: any, j: number) => j === i ? { ...x, descripcion: e.target.value } : x))} />
+              <input className="form-input" style={{ marginBottom: 4, fontWeight: 600 }} value={f.titulo} onChange={e => set('que_esperar', (inf.que_esperar ?? []).map((x, j) => j === i ? { ...x, titulo: e.target.value } : x))} />
+              <textarea className="form-textarea" rows={2} value={f.descripcion} onChange={e => set('que_esperar', (inf.que_esperar ?? []).map((x, j) => j === i ? { ...x, descripcion: e.target.value } : x))} />
             </div>
           ))}
           <div className="form-card-title" style={{ marginTop: 18 }}>Recomendaciones entre sesiones</div>
-          {(inf.recomendaciones ?? []).map((r: any, i: number) => (
+          {(inf.recomendaciones ?? []).map((r, i) => (
             <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-              <input className="form-input" style={{ width: 56, textAlign: 'center' }} value={r.icono} onChange={e => set('recomendaciones', inf.recomendaciones.map((x: any, j: number) => j === i ? { ...x, icono: e.target.value } : x))} />
-              <input className="form-input" value={r.texto} onChange={e => set('recomendaciones', inf.recomendaciones.map((x: any, j: number) => j === i ? { ...x, texto: e.target.value } : x))} />
-              <button className="btn-line danger" onClick={() => set('recomendaciones', inf.recomendaciones.filter((_: any, j: number) => j !== i))}>×</button>
+              <input className="form-input" style={{ width: 56, textAlign: 'center' }} value={r.icono} onChange={e => set('recomendaciones', (inf.recomendaciones ?? []).map((x, j) => j === i ? { ...x, icono: e.target.value } : x))} />
+              <input className="form-input" value={r.texto} onChange={e => set('recomendaciones', (inf.recomendaciones ?? []).map((x, j) => j === i ? { ...x, texto: e.target.value } : x))} />
+              <button className="btn-line danger" onClick={() => set('recomendaciones', (inf.recomendaciones ?? []).filter((_, j) => j !== i))}>×</button>
             </div>
           ))}
           <button className="btn-line" onClick={() => set('recomendaciones', [...(inf.recomendaciones ?? []), { icono: '✔', texto: '' }])} style={{ marginTop: 4 }}>+ Recomendación</button>
@@ -302,10 +322,10 @@ export default function EditorInforme({ params }: { params: Promise<{ id: string
                 <button className="btn-line danger" onClick={() => delEj(i)}>Quitar</button>
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                <div><label className="form-label">Series</label><input className="form-input" style={{ width: 70 }} value={e.series} onChange={ev => setEj(i, 'series', ev.target.value)} /></div>
-                <div><label className="form-label">Reps</label><input className="form-input" style={{ width: 80 }} value={e.repeticiones} onChange={ev => setEj(i, 'repeticiones', ev.target.value)} /></div>
+                <div><label className="form-label">Series</label><input className="form-input" style={{ width: 70 }} value={e.series ?? ''} onChange={ev => setEj(i, 'series', ev.target.value === '' ? null : Number(ev.target.value))} /></div>
+                <div><label className="form-label">Reps</label><input className="form-input" style={{ width: 80 }} value={e.repeticiones ?? ''} onChange={ev => setEj(i, 'repeticiones', ev.target.value)} /></div>
                 <div><label className="form-label">Frecuencia</label><input className="form-input" style={{ width: 100 }} value={e.frecuencia ?? ''} onChange={ev => setEj(i, 'frecuencia', ev.target.value)} placeholder="2×/día" /></div>
-                <div><label className="form-label">Descanso</label><input className="form-input" style={{ width: 90 }} value={e.descanso} onChange={ev => setEj(i, 'descanso', ev.target.value)} /></div>
+                <div><label className="form-label">Descanso</label><input className="form-input" style={{ width: 90 }} value={e.descanso ?? ''} onChange={ev => setEj(i, 'descanso', ev.target.value)} /></div>
               </div>
               <div style={{ marginTop: 8 }}>
                 <label className="form-label">Vídeo (YouTube, opcional)</label>

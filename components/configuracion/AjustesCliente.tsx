@@ -21,7 +21,12 @@ export function AjustesCliente() {
   const [voz, setVoz] = useState(false)
   const [listo, setListo] = useState(false)
 
+  // El tema y la preferencia de voz viven en el navegador (atributo del html
+  // y localStorage): no existen hasta que hidrata, así que hay que leerlos en
+  // un efecto. El flag `listo` evita pintar los interruptores en falso
+  // mientras tanto. Un render extra al montar, inevitable.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDark(document.documentElement.getAttribute('data-theme') === 'dark')
     setVoz(localStorage.getItem('rudami-voz') === '1')
     setListo(true)

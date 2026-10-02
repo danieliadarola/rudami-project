@@ -1,9 +1,16 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/app/lib/supabase'
+import { useCargarAlMontar } from '@/app/lib/useCargarAlMontar'
 import { AppShell } from '@/components/layout/AppShell'
+import type { Informe, Paciente } from '@/app/lib/tipos-db'
+
+/** Lo que pide el listado: unas columnas del informe y el nombre del paciente. */
+type InformeFila = Pick<Informe,
+  'id' | 'fecha' | 'tipo_sesion' | 'numero_sesion' | 'total_sesiones' | 'estado' | 'token' | 'paciente_id'
+> & { pacientes: Pick<Paciente, 'nombre' | 'apellidos'> | null }
 
 const MODO: Record<string, string> = { completa: 'Primera valoración', seguimiento: 'Seguimiento', rapida: 'Sesión rápida' }
 const ESTADO: Record<string, { l: string; c: string; bg: string }> = {
@@ -13,7 +20,7 @@ const ESTADO: Record<string, { l: string; c: string; bg: string }> = {
 
 export default function InformesPage() {
   const router = useRouter()
-  const [items, setItems] = useState<any[]>([])
+  const [items, setItems] = useState<InformeFila[]>([])
   const [busqueda, setBusqueda] = useState('')
   const [filtro, setFiltro] = useState<'todos' | 'borrador' | 'publicado'>('todos')
   const [cargando, setCargando] = useState(true)
@@ -25,10 +32,12 @@ export default function InformesPage() {
       .from('informes')
       .select('id, fecha, tipo_sesion, numero_sesion, total_sesiones, estado, token, paciente_id, pacientes(nombre, apellidos)')
       .order('created_at', { ascending: false }).limit(300)
-    setItems(data ?? [])
+    // Supabase declara la tabla anidada como lista aunque un informe tenga UN
+    // paciente; en ejecucion llega un objeto. De ahi el paso por `unknown`.
+    setItems((data ?? []) as unknown as InformeFila[])
     setCargando(false)
   }, [router])
-  useEffect(() => { cargar() }, [cargar])
+  useCargarAlMontar(cargar)
 
   const filtrados = items.filter(s => {
     if (filtro !== 'todos' && s.estado !== filtro) return false
@@ -53,7 +62,7 @@ export default function InformesPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
           <div className="modo-tabs" style={{ marginBottom: 0 }}>
             {FILTROS.map(ff => (
-              <button key={ff.k} className={`modo-tab${filtro === ff.k ? ' active' : ''}`} onClick={() => setFiltro(ff.k as any)}>
+              <button key={ff.k} className={`modo-tab${filtro === ff.k ? ' active' : ''}`} onClick={() => setFiltro(ff.k)}>
                 {ff.l} <span style={{ color: 'var(--faint)', fontWeight: 500 }}>{cuenta[ff.k]}</span>
               </button>
             ))}
@@ -71,14 +80,14 @@ export default function InformesPage() {
         ) : (
           <div style={{ background: 'var(--paper)', border: '1px solid var(--hair)', borderRadius: 14, overflow: 'hidden' }}>
             {filtrados.map((s, i) => {
-              const est = ESTADO[s.estado] ?? ESTADO.borrador
+              const est = ESTADO[s.estado ?? ''] ?? ESTADO.borrador
               return (
                 <div key={s.id} onClick={() => router.push(`/informes/${s.id}`)}
                   style={{ display: 'grid', gridTemplateColumns: '96px 1fr auto auto', gap: 16, alignItems: 'center', padding: '14px 20px', borderBottom: i < filtrados.length - 1 ? '1px solid var(--hair-s)' : 'none', cursor: 'pointer', transition: 'background .15s' }}
                   onMouseEnter={e => (e.currentTarget.style.background = '#f8f9fc')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{new Date((s.fecha || '') + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</div>
-                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>{MODO[s.tipo_sesion] ?? s.tipo_sesion ?? 'Sesión'}</div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>{MODO[s.tipo_sesion ?? ''] ?? s.tipo_sesion ?? 'Sesión'}</div>
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{s.pacientes?.nombre} {s.pacientes?.apellidos}</div>

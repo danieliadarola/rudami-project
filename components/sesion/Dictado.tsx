@@ -3,21 +3,25 @@
 // y rellena el formulario con IA (modo transcripción).
 
 import { useState, useRef } from 'react'
+import type { ExtraccionOutput } from '@/app/lib/ai'
+import { constructorVoz, type ReconocimientoVoz, type EventoVoz } from '@/app/lib/voz'
 
-export function Dictado({ onRellenar }: { onRellenar: (e: any) => void }) {
+
+
+export function Dictado({ onRellenar }: { onRellenar: (e: ExtraccionOutput) => void }) {
   const [grabando, setGrabando] = useState(false)
   const [transcript, setTranscript] = useState('')
   const [interim, setInterim] = useState('')
   const [procesando, setProcesando] = useState(false)
-  const recRef = useRef<any>(null)
+  const recRef = useRef<ReconocimientoVoz | null>(null)
   const onRef = useRef(false)
 
   const start = () => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    const SR = constructorVoz()
     if (!SR) { alert('El dictado por voz no está disponible en este navegador. Prueba con Chrome.'); return }
     const rec = new SR()
     rec.lang = 'es-ES'; rec.continuous = true; rec.interimResults = true
-    rec.onresult = (e: any) => {
+    rec.onresult = (e: EventoVoz) => {
       let fin = '', itm = ''
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const r = e.results[i]

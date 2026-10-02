@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/app/lib/supabase'
+import { useCargarAlMontar } from '@/app/lib/useCargarAlMontar'
 import { AppShell } from '@/components/layout/AppShell'
 
 interface Tipo { id: string; nombre: string; color: string; duracion_min: number; activo: boolean; orden: number }
@@ -27,7 +28,7 @@ export default function TiposCitaPage() {
     setTipos(data || [])
   }, [router])
 
-  useEffect(() => { cargar() }, [cargar])
+  useCargarAlMontar(cargar)
 
   const crear = async () => {
     if (!nuevo.nombre.trim() || !clinicaId) return

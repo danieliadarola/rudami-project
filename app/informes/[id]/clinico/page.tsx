@@ -2,11 +2,12 @@
 // Informe clínico/profesional: vista técnica para el fisio y la clínica (no la ve el paciente).
 // Reutiliza los datos de la sesión vinculada + el informe. Exporta a PDF con window.print().
 
-import { useState, use, useEffect, useCallback } from 'react'
+import { useState, use, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { supabase } from '@/app/lib/supabase'
+import { useCargarAlMontar } from '@/app/lib/useCargarAlMontar'
 import { AppShell } from '@/components/layout/AppShell'
+import type { Informe, InformeEjercicio, Paciente, Sesion, Perfil, Clinica } from '@/app/lib/tipos-db'
 import { PrintBtn } from '@/components/informes/PrintBtn'
 
 function extraerSeccion(texto: string, seccion: string): string {
@@ -27,13 +28,18 @@ function Seccion({ label, children, alerta }: { label: string; children: React.R
 export default function InformeClinico({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
-  const [inf, setInf] = useState<any>(null)
-  const [pac, setPac] = useState<any>(null)
-  const [ses, setSes] = useState<any>(null)
-  const [fisio, setFisio] = useState<any>(null)
-  const [clinica, setClinica] = useState<any>(null)
-  const [ejs, setEjs] = useState<any[]>([])
+  const [inf, setInf] = useState<Informe | null>(null)
+  const [pac, setPac] = useState<Paciente | null>(null)
+  const [ses, setSes] = useState<Sesion | null>(null)
+  const [fisio, setFisio] = useState<Pick<Perfil, 'nombre' | 'apellidos' | 'numero_colegiado'> | null>(null)
+  const [clinica, setClinica] = useState<Pick<Clinica, 'nombre'> | null>(null)
+  const [ejs, setEjs] = useState<InformeEjercicio[]>([])
   const [cargando, setCargando] = useState(true)
+  // `Date.now()` escrito en el render es impuro: devuelve algo distinto en
+  // cada pasada. Pasando la funcion SIN llamarla, React la ejecuta una sola
+  // vez al montar y el valor queda fijo mientras la pantalla este abierta,
+  // que es de sobra para contar dias.
+  const [ahora] = useState(Date.now)
 
   const cargar = useCallback(async () => {
     const { data: i } = await supabase.from('informes').select('*').eq('id', id).single()
@@ -49,7 +55,7 @@ export default function InformeClinico({ params }: { params: Promise<{ id: strin
     if (i.clinica_id) { const { data: c } = await supabase.from('clinicas').select('nombre').eq('id', i.clinica_id).single(); setClinica(c) }
     setCargando(false)
   }, [id, router])
-  useEffect(() => { cargar() }, [cargar])
+  useCargarAlMontar(cargar)
 
   if (cargando || !inf) return <AppShell><div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Cargando…</div></AppShell>
 
@@ -72,8 +78,14 @@ export default function InformeClinico({ params }: { params: Promise<{ id: strin
 
   const met = inf.metricas ?? {}
   const fecha = new Date((inf.fecha || '') + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
-  const edad = pac?.fecha_nacimiento ? Math.floor((Date.now() - new Date(pac.fecha_nacimiento).getTime()) / 31557600000) : null
-  const otras: [string, number][] = ([['Movilidad', met.movilidad], ['Fuerza', met.fuerza], ['Rigidez', met.rigidez], ['Fatiga', met.fatiga], ['Sueño', met.sueno], ['Adherencia', met.adherencia]] as any).filter(([, v]: any) => v != null)
+  const edad = pac?.fecha_nacimiento ? Math.floor((ahora - new Date(pac.fecha_nacimiento).getTime()) / 31557600000) : null
+  const TODAS: [string, number | null | undefined][] = [
+    ['Movilidad', met.movilidad], ['Fuerza', met.fuerza], ['Rigidez', met.rigidez],
+    ['Fatiga', met.fatiga], ['Sueño', met.sueno], ['Adherencia', met.adherencia],
+  ]
+  // El predicado con `par is` le dice a TypeScript que lo que sobrevive al
+  // filtro ya no tiene huecos, y asi `otras` es de numeros de verdad.
+  const otras = TODAS.filter((par): par is [string, number] => par[1] != null)
 
   return (
     <AppShell>
@@ -161,7 +173,7 @@ export default function InformeClinico({ params }: { params: Promise<{ id: strin
             <Seccion label="Indicadores de seguimiento">
               {(met.dolor_ini != null || met.dolor_fin != null) && (
                 <div style={{ display: 'flex', gap: 22, marginBottom: otras.length ? 18 : 0 }}>
-                  {[['EVA inicial', met.dolor_ini], ['EVA final', met.dolor_fin]].map(([l, v]: any) => (
+                  {([['EVA inicial', met.dolor_ini], ['EVA final', met.dolor_fin]] as [string, number | null | undefined][]).map(([l, v]) => (
                     <div key={l} style={{ flex: 1 }}>
                       <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 7 }}>{l}</div>
                       <div className="rep-bar"><span style={{ width: `${(v ?? 0) * 10}%`, background: evaColor(v ?? 0) }} /></div>
@@ -186,7 +198,7 @@ export default function InformeClinico({ params }: { params: Promise<{ id: strin
           {ejs.length > 0 && (
             <Seccion label="Ejercicios prescritos">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {ejs.map((e: any, idx: number) => (
+                {ejs.map((e, idx) => (
                   <div key={idx} style={{ borderBottom: idx < ejs.length - 1 ? '1px solid var(--hair-s)' : 'none', paddingBottom: idx < ejs.length - 1 ? 10 : 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13.5 }}>
                       <strong style={{ color: 'var(--ink)' }}>{e.nombre}</strong>

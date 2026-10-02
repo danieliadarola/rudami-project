@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/app/lib/supabase'
+import { useCargarAlMontar } from '@/app/lib/useCargarAlMontar'
 import { AppShell } from '@/components/layout/AppShell'
 
 interface TipoBono {
@@ -27,7 +28,7 @@ export default function TiposBonoPage() {
     const { data } = await supabase.from('tipos_bono').select('*').eq('clinica_id', perfil?.clinica_id).order('orden')
     setTipos(data || [])
   }, [router])
-  useEffect(() => { cargar() }, [cargar])
+  useCargarAlMontar(cargar)
 
   const crear = async () => {
     if (!nuevo.nombre.trim() || !clinicaId) return

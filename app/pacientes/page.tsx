@@ -34,7 +34,7 @@ export default function PacientesPage() {
       ])
       setPacientes(pacs ?? [])
       const act = new Set<string>(), con = new Set<string>()
-      ;(epis ?? []).forEach((e: any) => {
+      ;(epis ?? []).forEach(e => {
         if (e.paciente_id) {
           con.add(e.paciente_id)
           if (e.estado === 'activo') act.add(e.paciente_id)

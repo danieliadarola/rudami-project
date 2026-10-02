@@ -1,3 +1,16 @@
+
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { ChatCompletionTool } from 'groq-sdk/resources/chat/completions'
+
+/** El cliente de Supabase del servidor, con la sesion del fisio: respeta RLS. */
+type ClienteSupabase = SupabaseClient
+
+/** Lo que el modelo manda como argumentos de una herramienta: JSON libre. */
+export type ArgsTool = Record<string, unknown>
+
+/** Lo que devuelve una herramienta. Se serializa y vuelve al modelo. */
+export type ResultadoTool = Record<string, unknown>
+
 // app/lib/ai/asistente.ts
 // Herramientas (acciones) que el asistente puede ejecutar. Respeta la RLS:
 // recibe el supabase del usuario logueado, así que solo toca lo que él puede.
@@ -7,7 +20,7 @@ export interface Ctx { userId: string; clinicaId: string }
 // Acciones que NO se ejecutan sin confirmación explícita del fisio.
 export const DESTRUCTIVAS = new Set(['eliminar_paciente'])
 
-export const TOOLS = [
+export const TOOLS: ChatCompletionTool[] = [
   { type: 'function', function: {
     name: 'buscar_paciente',
     description: 'Busca pacientes por nombre, apellidos, teléfono o email. Úsalo para resolver a qué paciente se refiere el usuario.',
@@ -65,20 +78,20 @@ const norm = (x?: string | null) =>
   (x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 
 /** Candidatos de paciente: insensible a acentos, por palabras y telefono. RLS limita el conjunto. */
-async function candidatos(supabase: any, ctx: Ctx, query: string): Promise<any[]> {
+async function candidatos(supabase: ClienteSupabase, ctx: Ctx, query: string) {
   const { data } = await supabase.from('pacientes')
     .select('id, nombre, apellidos, telefono').eq('clinica_id', ctx.clinicaId).limit(1000)
   const ts = norm(query).split(/\s+/).filter(Boolean)
   const tel = query.replace(/\D/g, '')
-  return (data ?? []).map((p: any) => {
+  return (data ?? []).map(p => {
     const full = norm(`${p.nombre} ${p.apellidos}`)
     let score = ts.filter((t: string) => full.includes(t)).length
     if (tel.length >= 6 && p.telefono && p.telefono.replace(/\D/g, '').includes(tel)) score += 3
     return { p, score }
-  }).filter((x: any) => x.score > 0).sort((a: any, b: any) => b.score - a.score).map((x: any) => x.p)
+  }).filter(x => x.score > 0).sort((a, b) => b.score - a.score).map(x => x.p)
 }
 
-async function resolverPaciente(supabase: any, ctx: Ctx, query: string): Promise<{ id: string; nombre: string } | null> {
+async function resolverPaciente(supabase: ClienteSupabase, ctx: Ctx, query: string): Promise<{ id: string; nombre: string } | null> {
   if (esUuid(query)) {
     const { data } = await supabase.from('pacientes').select('id, nombre, apellidos').eq('id', query).maybeSingle()
     return data ? { id: data.id, nombre: `${data.nombre} ${data.apellidos}` } : null
@@ -88,10 +101,15 @@ async function resolverPaciente(supabase: any, ctx: Ctx, query: string): Promise
   return { id: c[0].id, nombre: `${c[0].nombre} ${c[0].apellidos}` }
 }
 
-export async function ejecutarTool(name: string, args: any, supabase: any, ctx: Ctx): Promise<any> {
+export async function ejecutarTool(
+  name: string,
+  args: ArgsTool,
+  supabase: ClienteSupabase,
+  ctx: Ctx,
+): Promise<ResultadoTool> {
   switch (name) {
     case 'buscar_paciente': {
-      const lista = await candidatos(supabase, ctx, args.query)
+      const lista = await candidatos(supabase, ctx, String(args.query ?? ''))
       return { pacientes: lista.slice(0, 6) }
     }
     case 'listar_citas': {
@@ -101,7 +119,16 @@ export async function ejecutarTool(name: string, args: any, supabase: any, ctx: 
         .eq('clinica_id', ctx.clinicaId)
         .gte('fecha_hora', `${dia}T00:00:00`).lte('fecha_hora', `${dia}T23:59:59`)
         .neq('estado', 'cancelada').order('fecha_hora')
-      return { fecha: dia, citas: (data ?? []).map((c: any) => ({
+      // Supabase declara las tablas anidadas como lista aunque una cita tenga
+      // UN paciente y UN tipo; en ejecucion llegan objetos.
+      type CitaDelDia = {
+        fecha_hora: string
+        duracion_min: number | null
+        estado: string | null
+        pacientes: { nombre: string | null; apellidos: string | null } | null
+        tipos_cita: { nombre: string | null } | null
+      }
+      return { fecha: dia, citas: ((data ?? []) as unknown as CitaDelDia[]).map(c => ({
         hora: new Date(c.fecha_hora).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
         paciente: `${c.pacientes?.nombre ?? ''} ${c.pacientes?.apellidos ?? ''}`.trim(),
         tipo: c.tipos_cita?.nombre, duracion: c.duracion_min, estado: c.estado,
@@ -112,7 +139,7 @@ export async function ejecutarTool(name: string, args: any, supabase: any, ctx: 
         .select('fecha_hora, duracion_min').eq('clinica_id', ctx.clinicaId)
         .gte('fecha_hora', `${args.fecha}T00:00:00`).lte('fecha_hora', `${args.fecha}T23:59:59`).neq('estado', 'cancelada')
       const ocupados = new Set<string>()
-      ;(data ?? []).forEach((c: any) => {
+      ;(data ?? []).forEach(c => {
         const ini = new Date(c.fecha_hora); const fin = new Date(ini.getTime() + (c.duracion_min ?? 60) * 60000)
         for (let t = new Date(ini); t < fin; t = new Date(t.getTime() + 30 * 60000)) {
           ocupados.add(`${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`)
@@ -125,7 +152,7 @@ export async function ejecutarTool(name: string, args: any, supabase: any, ctx: 
       return { fecha: args.fecha, huecos: libres }
     }
     case 'crear_cita': {
-      const pac = await resolverPaciente(supabase, ctx, args.paciente)
+      const pac = await resolverPaciente(supabase, ctx, String(args.paciente ?? ''))
       if (!pac) return { error: `No encuentro al paciente "${args.paciente}".` }
       let tipo_id = null, dur = args.duracion_min ?? 60
       if (args.tipo) {
@@ -137,7 +164,7 @@ export async function ejecutarTool(name: string, args: any, supabase: any, ctx: 
       return error ? { error: 'No se pudo crear la cita.' } : { ok: true, mensaje: `Cita creada para ${pac.nombre} el ${args.fecha} a las ${args.hora}.` }
     }
     case 'cancelar_cita': {
-      const pac = await resolverPaciente(supabase, ctx, args.paciente)
+      const pac = await resolverPaciente(supabase, ctx, String(args.paciente ?? ''))
       if (!pac) return { error: `No encuentro al paciente "${args.paciente}".` }
       let q = supabase.from('citas').select('id, fecha_hora').eq('paciente_id', pac.id).neq('estado', 'cancelada')
       q = args.fecha ? q.gte('fecha_hora', `${args.fecha}T00:00:00`).lte('fecha_hora', `${args.fecha}T23:59:59`) : q.gte('fecha_hora', new Date().toISOString())
@@ -151,7 +178,7 @@ export async function ejecutarTool(name: string, args: any, supabase: any, ctx: 
       return error ? { error: 'No se pudo crear el paciente.' } : { ok: true, mensaje: `Paciente ${args.nombre} ${args.apellidos} creado.` }
     }
     case 'dar_de_alta': {
-      const pac = await resolverPaciente(supabase, ctx, args.paciente)
+      const pac = await resolverPaciente(supabase, ctx, String(args.paciente ?? ''))
       if (!pac) return { error: `No encuentro al paciente "${args.paciente}".` }
       const { data } = await supabase.from('episodios').select('id').eq('paciente_id', pac.id).eq('estado', 'activo').limit(1)
       if (!data?.length) return { error: `${pac.nombre} no tiene episodio activo.` }
@@ -160,7 +187,7 @@ export async function ejecutarTool(name: string, args: any, supabase: any, ctx: 
       return { ok: true, mensaje: `${pac.nombre} dado de alta (episodio cerrado).` }
     }
     case 'eliminar_paciente': {
-      const pac = await resolverPaciente(supabase, ctx, args.paciente)
+      const pac = await resolverPaciente(supabase, ctx, String(args.paciente ?? ''))
       if (!pac) return { error: `No encuentro al paciente "${args.paciente}".` }
       await supabase.from('pacientes').delete().eq('id', pac.id)
       return { ok: true, mensaje: `Paciente ${pac.nombre} eliminado.` }

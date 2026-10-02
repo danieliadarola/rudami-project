@@ -5,12 +5,19 @@ import { useState } from 'react'
 import Link from 'next/link'
 import SesionCard from '@/app/components/SesionCard'
 import BotonCerrarEpisodio from '@/app/components/BotonCerrarEpisodio'
+import type { FisioFicha } from '@/app/components/SesionCard'
+import type { Episodio, Sesion, Paciente } from '@/app/lib/tipos-db'
 
 const MODO_LABEL: Record<string, string> = { completa: 'Primera', seguimiento: 'Seguimiento', rapida: 'Rápida' }
 const evaColor = (v: number | null) => (v == null ? 'var(--faint)' : v <= 3 ? '#16a34a' : v <= 6 ? '#d97706' : '#dc2626')
 const fechaCorta = (f: string) => new Date(f + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
 
-export function EpisodioHistorial({ episodio, sesiones, paciente, fisios }: { episodio: any; sesiones: any[]; paciente: any; fisios: any[] }) {
+export function EpisodioHistorial({ episodio, sesiones, paciente, fisios }: {
+  episodio: Episodio
+  sesiones: Sesion[]
+  paciente: Paciente
+  fisios: FisioFicha[]
+}) {
   const [openId, setOpenId] = useState<string | null>(null)
   const ses = sesiones
     .filter(s => s.episodio_id === episodio.id)
@@ -46,7 +53,7 @@ export function EpisodioHistorial({ episodio, sesiones, paciente, fisios }: { ep
           <button className="hist-row" onClick={() => setOpenId(openId === s.id ? null : s.id)}>
             <div>
               <div className="hist-date">{fechaCorta(s.fecha)}</div>
-              <div className="hist-modo">{MODO_LABEL[s.tipo] ?? 'Sesión'}</div>
+              <div className="hist-modo">{MODO_LABEL[s.tipo ?? ''] ?? 'Sesión'}</div>
             </div>
             <div className="hist-desc">{s.anamnesis || s.notas || 'Sin descripción'}</div>
             <div className="hist-eva">

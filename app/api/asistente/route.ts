@@ -4,7 +4,8 @@
 import { NextResponse } from 'next/server'
 import Groq from 'groq-sdk'
 import { createClient } from '@/app/lib/supabase-server'
-import { TOOLS, DESTRUCTIVAS, ejecutarTool, type Ctx } from '@/app/lib/ai/asistente'
+import { TOOLS, DESTRUCTIVAS, ejecutarTool, type Ctx, type ArgsTool, type ResultadoTool } from '@/app/lib/ai/asistente'
+import type { ChatCompletionMessageParam } from 'groq-sdk/resources/chat/completions'
 import { MODELO } from '@/app/lib/ai/groq'
 
 const client = new Groq({ apiKey: process.env.GROQ_API_KEY })
@@ -17,7 +18,9 @@ function hoyMadrid() {
 }
 
 /** Etiqueta legible del paso que el asistente está dando (traza de pensamiento). */
-function pasoLabel(name: string, a: any): string {
+function pasoLabel(name: string, args: ArgsTool): string {
+  // Los argumentos vienen de un JSON del modelo: puede faltar cualquiera.
+  const a = args as Record<string, string | undefined>
   switch (name) {
     case 'buscar_paciente': return `Buscando a «${a.query ?? ''}»`
     case 'listar_citas': return `Consultando las citas ${a.fecha ? 'del ' + a.fecha : 'de hoy'}`
@@ -72,13 +75,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ mensaje: res.mensaje || (res.error ?? 'Hecho.') })
     }
 
-    const messages: any[] = [{ role: 'system', content: buildSystem() }, ...(body.messages ?? [])]
+    const messages: ChatCompletionMessageParam[] = [{ role: 'system', content: buildSystem() }, ...(body.messages ?? [])]
     const pasos: string[] = [] // traza de pensamiento para mostrar en la UI
 
     for (let i = 0; i < 5; i++) {
       const completion = await client.chat.completions.create({
         model: MODELO,
-        messages, tools: TOOLS as any, tool_choice: 'auto', temperature: 0.2, max_tokens: 900,
+        messages, tools: TOOLS, tool_choice: 'auto', temperature: 0.2, max_tokens: 900,
         reasoning_effort: 'low',
       })
       // Cada vuelta del bucle es una llamada real a Groq: un solo mensaje del
@@ -111,7 +114,7 @@ export async function POST(request: Request) {
       for (const c of calls) {
         const args = (() => { try { return JSON.parse(c.function.arguments || '{}') } catch { return {} } })()
         pasos.push(pasoLabel(c.function.name, args))
-        let result: any
+        let result: ResultadoTool
         try { result = await ejecutarTool(c.function.name, args, supabase, ctx) }
         catch { result = { error: 'Error ejecutando la acción.' } }
         messages.push({ role: 'tool', tool_call_id: c.id, content: JSON.stringify(result) })

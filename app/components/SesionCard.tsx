@@ -3,11 +3,15 @@
 import { useState } from 'react'
 import BotonPDF from './BotonPDF'
 import BotonEliminarSesion from './BotonEliminarSesion'
+import type { Sesion, Paciente, Perfil } from '@/app/lib/tipos-db'
+
+/** Las columnas del fisio que pide la ficha del paciente. */
+export type FisioFicha = Pick<Perfil, 'id' | 'nombre' | 'apellidos' | 'numero_colegiado' | 'color'>
 
 interface Props {
-  sesion: any
-  paciente: any
-  fisios?: any[]
+  sesion: Sesion
+  paciente: Paciente
+  fisios?: FisioFicha[]
   defaultOpen?: boolean
   embedded?: boolean
 }
@@ -55,7 +59,7 @@ export default function SesionCard({ sesion, paciente, fisios = [], defaultOpen 
   const derivacionAlerta =
     sesion.derivacion === true ||
     esSignificativo(derivacion, /no se indica|no procede|no indicada|^no\b/i)
-  const fisio = fisios.find((f: any) => f.id === sesion.user_id)
+  const fisio = fisios.find(f => f.id === sesion.user_id)
 
   return (
     <div className={embedded ? "" : "bg-white rounded-xl border border-gray-200 overflow-hidden"}>
@@ -82,13 +86,15 @@ export default function SesionCard({ sesion, paciente, fisios = [], defaultOpen 
         </div>
         <div className="flex items-center gap-3 ml-4 flex-shrink-0">
           <span className={`text-sm px-3 py-1 rounded-full font-medium ${
-            sesion.dolor_eva <= 3
+            sesion.dolor_eva == null
+              ? 'bg-gray-100 text-gray-600'
+              : sesion.dolor_eva <= 3
               ? 'bg-green-100 text-green-700'
               : sesion.dolor_eva <= 6
               ? 'bg-yellow-100 text-yellow-700'
               : 'bg-red-100 text-red-700'
           }`}>
-            EVA: {sesion.dolor_eva}/10
+            EVA: {sesion.dolor_eva ?? '—'}/10
           </span>
           <span className="text-gray-400 text-sm">
             {abierta ? '▲' : '▼'}

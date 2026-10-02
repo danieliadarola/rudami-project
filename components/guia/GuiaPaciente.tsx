@@ -1,4 +1,8 @@
 'use client'
+/* eslint-disable @next/next/no-img-element -- Las imagenes de los ejercicios
+   son remotas (Supabase, Free Exercise DB o miniatura de YouTube) y next/image
+   exigiria declarar cada dominio en next.config. Esta pantalla se abre desde un
+   enlace de WhatsApp: las <img> ya van en lazy y sin recorte. */
 
 // components/guia/GuiaPaciente.tsx
 // Guía de recuperación interactiva del paciente (/r/[token]).
@@ -21,6 +25,7 @@ import { SparkDolor } from '@/components/paciente/SparkDolor'
 import { SemanaChecks } from '@/components/paciente/SemanaChecks'
 import type { EjercicioGuia } from '@/app/lib/paciente/tipos'
 import { Revelar } from '@/components/paciente/Revelar'
+import type { PlanPaciente } from '@/app/lib/paciente/tipos'
 
 // La sesión guiada se carga aparte, bajo demanda. Es la única pantalla que usa
 // `motion`, y un import normal la meteria en el bundle de la guía aunque el
@@ -57,25 +62,27 @@ export function GuiaPaciente({
   token,
   sesionIniciada = false,
 }: {
-  data: any
+  data: PlanPaciente
   token: string
   /** Lo resuelve el servidor en /r/[token]: cambia el texto del puente a la app
    *  para no ofrecer "crea tu cuenta" a quien ya la tiene. */
   sesionIniciada?: boolean
 }) {
   const i = data.informe, pac = data.paciente, fis = data.fisio, cli = data.clinica
-  const ejs: any[] = data.ejercicios ?? []
+  // useMemo y no una constante suelta: `?? []` crea un array nuevo en cada
+  // render y haria recalcular los useMemo que dependen de el.
+  const ejs = useMemo<EjercicioGuia[]>(() => data.ejercicios ?? [], [data.ejercicios])
   const met = i.metricas ?? {}
-  const faq = i.faq ?? {}
+  const faq = useMemo(() => i.faq ?? {}, [i.faq])
   const hoy: string = data.hoy ?? iso(new Date())
 
   /* estado interactivo (optimista) */
   const [checks, setChecks] = useState<Set<string>>(
-    () => new Set((data.checks ?? []).map((c: any) => `${c.ejercicio_id}|${c.fecha}`)),
+    () => new Set((data.checks ?? []).map(c => `${c.ejercicio_id}|${c.fecha}`)),
   )
   const [checkins, setCheckins] = useState<{ fecha: string; dolor: number }[]>(data.checkins ?? [])
-  const [dolorHoy, setDolorHoy] = useState<number>(() => data.checkins?.find((c: any) => c.fecha === hoy)?.dolor ?? 5)
-  const [checkinOk, setCheckinOk] = useState<boolean>(() => Boolean(data.checkins?.find((c: any) => c.fecha === hoy)))
+  const [dolorHoy, setDolorHoy] = useState<number>(() => data.checkins?.find(c => c.fecha === hoy)?.dolor ?? 5)
+  const [checkinOk, setCheckinOk] = useState<boolean>(() => Boolean(data.checkins?.find(c => c.fecha === hoy)))
   const [guardandoCheckin, setGuardandoCheckin] = useState(false)
   const [videoAbierto, setVideoAbierto] = useState<Record<string, boolean>>({})
   const [sesionAbierta, setSesionAbierta] = useState(false)
@@ -105,14 +112,18 @@ export function GuiaPaciente({
   }, [checkins, met.dolor_fin, i.fecha])
 
   const faqEj = useMemo(() => {
-    const m = new Map<string, any>()
-    ;(faq.ejercicios ?? []).forEach((f: any) => m.set((f.nombre ?? '').toLowerCase().trim(), f))
+    const m = new Map<string, { como_hacerlo?: string; sensacion_normal?: string }>()
+    ;(faq.ejercicios ?? []).forEach(f => m.set((f.nombre ?? '').toLowerCase().trim(), f))
     return m
   }, [faq])
 
   const fecha = fechaLarga(i.fecha)
   const di = met.dolor_ini ?? 0, df = met.dolor_fin ?? 0, mejora = di - df
-  const otras: [string, number][] = ([['Movilidad', met.movilidad], ['Fuerza', met.fuerza], ['Rigidez', met.rigidez], ['Fatiga', met.fatiga], ['Sueño', met.sueno], ['Adherencia', met.adherencia]] as any).filter(([, v]: any) => v != null)
+  const TODAS: [string, number | null | undefined][] = [
+    ['Movilidad', met.movilidad], ['Fuerza', met.fuerza], ['Rigidez', met.rigidez],
+    ['Fatiga', met.fatiga], ['Sueño', met.sueno], ['Adherencia', met.adherencia],
+  ]
+  const otras = TODAS.filter((par): par is [string, number] => par[1] != null)
 
   /** Zonas trabajadas por todo el plan (union de grupos de cada ejercicio) → mapa de la cabecera. */
   const gruposTotales = useMemo(() => {
@@ -123,15 +134,15 @@ export function GuiaPaciente({
 
   /* ── acciones ── */
 
-  const marcar = async (e: any) => {
+  const marcar = async (e: EjercicioGuia) => {
     const k = `${e.id}|${hoy}`
     const hecho = !checks.has(k)
-    setChecks(prev => { const s = new Set(prev); hecho ? s.add(k) : s.delete(k); return s }) // optimista
+    setChecks(prev => { const s = new Set(prev); if (hecho) s.add(k); else s.delete(k); return s }) // optimista
     try {
       const { data: r, error } = await supabase.rpc('guia_marcar_ejercicio', { p_token: token, p_ejercicio_id: e.id, p_hecho: hecho })
       if (error || !r?.ok) throw new Error()
     } catch {
-      setChecks(prev => { const s = new Set(prev); hecho ? s.delete(k) : s.add(k); return s }) // revert
+      setChecks(prev => { const s = new Set(prev); if (hecho) s.delete(k); else s.add(k); return s }) // revert
     }
   }
 
@@ -327,7 +338,7 @@ export function GuiaPaciente({
               </div>
               {Array.isArray(i.recomendaciones) && i.recomendaciones.length > 0 && (
                 <div className="rep-tips">
-                  {i.recomendaciones.map((r: any, idx: number) => (
+                  {(i.recomendaciones ?? []).map((r, idx) => (
                     <div key={idx} className="rep-tip">
                       <span className="ico" aria-hidden="true">{r.icono || '•'}</span>
                       <span>{r.texto}</span>
@@ -344,7 +355,7 @@ export function GuiaPaciente({
           <Seccion label="Tus ejercicios">
             <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: -6, marginBottom: 6 }}>Hazlos a diario para mejorar tu recuperación.</p>
             <div className="rep-exlist">
-              {ejs.map((e: any, idx: number) => {
+              {ejs.map((e, idx) => {
                 const ytId = youtubeId(e.video_url)
                 const media = e.gif_url || e.imagen_url || ilustracionEjercicio(e.nombre)
                 const thumb = media || (ytId ? `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg` : null)
@@ -358,7 +369,7 @@ export function GuiaPaciente({
                   <details key={e.id ?? idx} className="rep-exrow">
                     <summary>
                       <span className="rep-exthumb">
-                        {thumb ? <img src={thumb} alt={e.nombre} loading="lazy" /> : <IconMov />}
+                        {thumb ? <img src={thumb} alt={e.nombre ?? ''} loading="lazy" /> : <IconMov />}
                         {hecho && <span className="done" aria-label="Hecho hoy"><IconCheck /></span>}
                       </span>
                       <span className="rep-exmeta">
@@ -380,11 +391,11 @@ export function GuiaPaciente({
                     <div className="rep-exbody">
                       <div className="guia-ex-media" style={{ borderRadius: 12, border: '1px solid var(--hair-s)', marginBottom: 14 }}>
                         {ytId && videoAbierto[e.id ?? idx] ? (
-                          <iframe src={`https://www.youtube.com/embed/${ytId}?autoplay=1`} title={e.nombre} allow="autoplay; encrypted-media" allowFullScreen />
+                          <iframe src={`https://www.youtube.com/embed/${ytId}?autoplay=1`} title={e.nombre ?? ''} allow="autoplay; encrypted-media" allowFullScreen />
                         ) : media ? (
-                          <img src={media} alt={e.nombre} loading="lazy" />
+                          <img src={media} alt={e.nombre ?? ''} loading="lazy" />
                         ) : ytId ? (
-                          <img src={`https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`} alt={e.nombre} loading="lazy" />
+                          <img src={`https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`} alt={e.nombre ?? ''} loading="lazy" />
                         ) : (
                           <div style={{ height: '100%', display: 'grid', placeItems: 'center' }}><IconMov /></div>
                         )}
@@ -459,7 +470,9 @@ export function GuiaPaciente({
         {/* Dolor en la sesión */}
         <Seccion label="Tu dolor en la sesión">
           <div style={{ display: 'flex', gap: 22 }}>
-            {[['Al empezar', di], ['Al terminar', df]].map(([l, v]: any) => (
+            {([['Al empezar', di], ['Al terminar', df]] as [string, number | null | undefined][])
+              .filter((par): par is [string, number] => par[1] != null)
+              .map(([l, v]) => (
               <div key={l} style={{ flex: 1 }}>
                 <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 7 }}>{l}</div>
                 <div className="rep-bar"><span style={{ width: `${v * 10}%`, background: evaColor(v) }} /></div>
@@ -488,13 +501,13 @@ export function GuiaPaciente({
         {Array.isArray(i.que_esperar) && i.que_esperar.length > 0 && (
           <Seccion label="¿Qué podemos esperar?">
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {i.que_esperar.map((f: any, idx: number) => (
+              {(i.que_esperar ?? []).map((f, idx) => (
                 <div key={idx} style={{ display: 'flex', gap: 14 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <span style={{ width: 26, height: 26, borderRadius: '50%', border: '1.5px solid var(--ink)', color: 'var(--ink)', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{f.fase ?? idx + 1}</span>
-                    {idx < i.que_esperar.length - 1 && <span style={{ width: 1.5, flex: 1, background: 'var(--hair)', margin: '4px 0' }} />}
+                    {idx < (i.que_esperar?.length ?? 0) - 1 && <span style={{ width: 1.5, flex: 1, background: 'var(--hair)', margin: '4px 0' }} />}
                   </div>
-                  <div style={{ paddingBottom: idx < i.que_esperar.length - 1 ? 16 : 0 }}>
+                  <div style={{ paddingBottom: idx < (i.que_esperar?.length ?? 0) - 1 ? 16 : 0 }}>
                     <p style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--ink)' }}>{f.titulo}</p>
                     <p style={{ fontSize: 13.5, color: 'var(--muted)', marginTop: 3, lineHeight: 1.5 }}>{f.descripcion}</p>
                   </div>
@@ -507,7 +520,7 @@ export function GuiaPaciente({
         {/* FAQ */}
         {Array.isArray(faq.generales) && faq.generales.length > 0 && (
           <Seccion label="Dudas frecuentes">
-            {faq.generales.map((f: any, idx: number) => (
+            {(faq.generales ?? []).map((f, idx) => (
               <details key={idx} className="guia-faq">
                 <summary>{f.pregunta}</summary>
                 <p>{f.respuesta}</p>

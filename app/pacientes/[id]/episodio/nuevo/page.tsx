@@ -3,6 +3,7 @@
 import { useState, use, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/app/lib/supabase'
+import type { Paciente } from '@/app/lib/tipos-db'
 import { AppShell } from '@/components/layout/AppShell'
 
 export default function NuevoEpisodio({ params }: { params: Promise<{ id: string }> }) {
@@ -10,7 +11,7 @@ export default function NuevoEpisodio({ params }: { params: Promise<{ id: string
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [paciente, setPaciente] = useState<any>(null)
+  const [paciente, setPaciente] = useState<Pick<Paciente, 'nombre' | 'apellidos' | 'clinica_id'> | null>(null)
   const [form, setForm] = useState({
     titulo: '', descripcion: '', fecha_inicio: new Date().toISOString().split('T')[0],
   })

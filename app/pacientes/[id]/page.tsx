@@ -7,11 +7,6 @@ import { EpisodioHistorial } from '@/components/pacientes/EpisodioHistorial'
 
 export const revalidate = 0
 
-function calcEdad(f?: string | null): number | null {
-  if (!f) return null
-  return Math.floor((Date.now() - new Date(f).getTime()) / 31557600000)
-}
-
 export default async function FichaPaciente({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
@@ -32,14 +27,16 @@ export default async function FichaPaciente({ params }: { params: Promise<{ id: 
   const eps = episodios ?? []
   const ses = sesiones ?? []
   const fis = fisios ?? []
-  const edad = calcEdad(paciente.fecha_nacimiento)
   const iniciales = `${paciente.nombre?.[0] ?? ''}${paciente.apellidos?.[0] ?? ''}`.toUpperCase()
   const fisioAsig = fis.find(x => x.id === paciente.user_id)
   const fisioColor = fisioAsig?.color ?? '#3b82f6'
 
   const epPrincipal = eps.find(e => e.estado === 'activo') ?? eps[0] ?? null
 
-  const proxima = (proximas ?? [])[0] as any
+  // Supabase declara `tipos_cita` como lista aunque una cita tenga UN tipo;
+  // en ejecucion llega un objeto, de ahi el paso por `unknown`.
+  const proxima = (proximas ?? [])[0] as unknown as
+    { fecha_hora: string; estado: string | null; tipos_cita: { nombre: string | null; color: string | null } | null } | undefined
   let proxTexto: { hora: string; dia: string; tipo: string } | null = null
   if (proxima) {
     const d = new Date(proxima.fecha_hora)

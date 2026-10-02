@@ -1,10 +1,16 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/app/lib/supabase'
+import { useCargarAlMontar } from '@/app/lib/useCargarAlMontar'
 import { AppShell } from '@/components/layout/AppShell'
+import type { Paciente, Perfil } from '@/app/lib/tipos-db'
+
+/** Lo que piden las consultas de esta pantalla, no la fila entera. */
+type PacienteLista = Pick<Paciente, 'id' | 'nombre' | 'apellidos'>
+type FisioLista = Pick<Perfil, 'id' | 'nombre' | 'apellidos'>
 
 interface Bono {
   id: string; paciente_id: string; total_sesiones: number; sesiones_usadas: number
@@ -48,9 +54,9 @@ function Ring({ restantes, total, color }: { restantes: number; total: number; c
 export default function BonosPage() {
   const router = useRouter()
   const [bonos, setBonos] = useState<Bono[]>([])
-  const [pacientes, setPacientes] = useState<any[]>([])
+  const [pacientes, setPacientes] = useState<PacienteLista[]>([])
   const [tiposBono, setTiposBono] = useState<TipoBono[]>([])
-  const [fisios, setFisios] = useState<any[]>([])
+  const [fisios, setFisios] = useState<FisioLista[]>([])
   const [clinicaId, setClinicaId] = useState<string | null>(null)
   const [esAdmin, setEsAdmin] = useState(false)
   const [cargando, setCargando] = useState(true)
@@ -73,9 +79,14 @@ export default function BonosPage() {
     setBonos((bs ?? []) as Bono[]); setPacientes(ps ?? []); setTiposBono(tb ?? []); setFisios(fs ?? [])
     setCargando(false)
   }, [router])
-  useEffect(() => { cargar() }, [cargar])
+  useCargarAlMontar(cargar)
 
   const conEstado = bonos.map(b => ({ b, e: estadoDe(b) }))
+  // `Date.now()` escrito en el render es impuro: devuelve algo distinto en
+  // cada pasada. Pasando la funcion SIN llamarla, React la ejecuta una sola
+  // vez al montar y el valor queda fijo mientras la pantalla este abierta,
+  // que es de sobra para contar dias.
+  const [ahora] = useState(Date.now)
   const visibles = conEstado.filter(({ b, e }) => {
     if (fisioFiltro && b.pacientes?.user_id !== fisioFiltro) return false
     return filtro === 'todos' ? true
@@ -140,7 +151,7 @@ export default function BonosPage() {
         )}
 
         <div className="modo-tabs" style={{ marginBottom: 22 }}>
-          {FILTROS.map(f => <button key={f.k} className={`modo-tab${filtro === f.k ? ' active' : ''}`} onClick={() => setFiltro(f.k as any)}>{f.l}</button>)}
+          {FILTROS.map(f => <button key={f.k} className={`modo-tab${filtro === f.k ? ' active' : ''}`} onClick={() => setFiltro(f.k)}>{f.l}</button>)}
         </div>
 
         {cargando ? (
@@ -151,9 +162,9 @@ export default function BonosPage() {
           <div className="bono-grid">
             {visibles.map(({ b, e }) => {
               const restantes = b.total_sesiones - b.sesiones_usadas, m = META[e]
-              const dias = b.fecha_caducidad ? Math.ceil((new Date(b.fecha_caducidad).getTime() - Date.now()) / DIA) : null
+              const dias = b.fecha_caducidad ? Math.ceil((new Date(b.fecha_caducidad).getTime() - ahora) / DIA) : null
               return (
-                <div key={b.id} className="bono-card" onClick={() => router.push(`/pacientes/${b.paciente_id}`)} style={{ ['--ec' as any]: 'var(--accent)' }}>
+                <div key={b.id} className="bono-card" onClick={() => router.push(`/pacientes/${b.paciente_id}`)} style={{ '--ec': 'var(--accent)' } as React.CSSProperties}>
                   <div className="bono-top">
                     <div style={{ minWidth: 0 }}>
                       <p className="bono-pac">{b.pacientes?.nombre} {b.pacientes?.apellidos}</p>
@@ -189,7 +200,7 @@ export default function BonosPage() {
   )
 }
 
-function VenderBono({ clinicaId, pacientes, tiposBono, onClose, onCreado }: { clinicaId: string | null; pacientes: any[]; tiposBono: TipoBono[]; onClose: () => void; onCreado: () => void }) {
+function VenderBono({ clinicaId, pacientes, tiposBono, onClose, onCreado }: { clinicaId: string | null; pacientes: PacienteLista[]; tiposBono: TipoBono[]; onClose: () => void; onCreado: () => void }) {
   const [pacienteId, setPacienteId] = useState('')
   const [tipoId, setTipoId] = useState('')
   const [guardando, setGuardando] = useState(false)
@@ -225,7 +236,7 @@ function VenderBono({ clinicaId, pacientes, tiposBono, onClose, onCreado }: { cl
 
         <label className="form-label" style={{ marginTop: 16 }}>Bono del catálogo</label>
         {tiposBono.length === 0 ? (
-          <p style={{ fontSize: 12.5, color: 'var(--faint)' }}>No hay bonos en el catálogo. El administrador debe crearlos en "Gestionar catálogo".</p>
+          <p style={{ fontSize: 12.5, color: 'var(--faint)' }}>No hay bonos en el catálogo. El administrador debe crearlos en &quot;Gestionar catálogo&quot;.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {tiposBono.map(t => {

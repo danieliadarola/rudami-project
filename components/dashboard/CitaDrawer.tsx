@@ -22,9 +22,6 @@ const estadoMeta = {
   completada: { label: 'Completada', cls: 'estado-ok'    },
 }
 
-function evaColor(v: number) {
-  return v >= 7 ? '#dc2626' : v >= 4 ? '#d97706' : '#10b981'
-}
 
 export function CitaDrawer({ cita, fisio, pacienteId, onClose, onConfirmar, onCancelar, onReprogramar }: Props) {
   if (!cita) return null

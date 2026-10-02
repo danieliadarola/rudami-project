@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/app/lib/supabase'
+import { useCargarAlMontar } from '@/app/lib/useCargarAlMontar'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 
@@ -49,7 +50,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setCargando(false)
   }, [router])
 
-  useEffect(() => { cargar() }, [cargar])
+  useCargarAlMontar(cargar)
 
   async function signOut() {
     await supabase.auth.signOut()
