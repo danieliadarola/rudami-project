@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { AvisosPaciente } from '@/components/pacientes/AvisosPaciente'
+import { AccesoApp } from '@/components/pacientes/AccesoApp'
 import { createClient } from '@/app/lib/supabase-server'
 import { AppShell } from '@/components/layout/AppShell'
 import { DI } from '@/components/ui/DashboardIcons'
@@ -138,6 +139,13 @@ export default async function FichaPaciente({ params }: { params: Promise<{ id: 
                 </Link>
               </div>
             )}
+
+            <AccesoApp
+              pacienteId={id}
+              nombre={paciente.nombre}
+              telefono={paciente.telefono}
+              yaTieneCuenta={!!paciente.auth_user_id}
+            />
 
             <AvisosPaciente pacienteId={id} />
 

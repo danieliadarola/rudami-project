@@ -1,192 +1,221 @@
 'use client'
 
 // components/paciente/FormularioEntrar.tsx
-// Petición del enlace de acceso del paciente (enlace mágico).
+// Acceso del paciente con CONTRASEÑA (10/10/2026).
 //
-// POR QUÉ ESTE COMPONENTE ES DE CLIENTE Y NO UN SERVER ACTION:
-// @supabase/ssr usa flujo PKCE (verificado: flowType 'pkce' por defecto en
-// createBrowserClient y createServerClient). Al pedir el enlace, el cliente de
-// navegador guarda un "code verifier" en una cookie que después necesita
-// /mi/callback para canjear el código. Si la petición saliera del servidor, esa
-// cookie no se crearía en el navegador del paciente y el canje fallaría.
+// POR QUÉ SE CAMBIÓ EL ENLACE POR CORREO POR UNA CONTRASEÑA
+// La app nació sin contraseñas: el correo era la credencial. Sobre el papel
+// es más cómodo, pero en la práctica dejó la app inservible, porque el
+// remitente que trae Supabase de serie solo entrega a las direcciones del
+// equipo del proyecto y con un tope de muy pocos envíos por hora. Nadie que
+// no estuviera en el equipo podía entrar, ni siquiera para una demo.
 //
-// TRES CAMINOS, UN SOLO FORMULARIO:
-//   · token   → viene de /r/[token]: vincula la cuenta a su ficha de clínica.
-//   · nuevo   → "Crear cuenta" de un usuario sin clínica: pide también el nombre.
-//   · nada    → login normal de quien ya tiene cuenta.
-// Sin contraseñas en ningún caso: el correo es la credencial.
+// Con contraseña el registro no depende de nadie: nombre, correo, contraseña
+// y dentro. El enlace por correo sigue existiendo en /mi/callback para cuando
+// haya un remitente de verdad (Resend), pero ya no es el único camino.
 //
-// LA ESPERA ENTRE ENVÍOS (10/10/2026)
-// Supabase corta los envíos seguidos con un 429 y el mensaje "you can only
-// request this after N seconds". Antes eso se pintaba como un error genérico
-// ("inténtalo en un minuto") y la gente volvía a pulsar, lo que reiniciaba el
-// contador y hacía creer que el correo no llegaba nunca. Ahora se lee el
-// número real de segundos, se bloquea el botón y se enseña la cuenta atrás.
+// REQUISITO DE CONFIGURACIÓN
+// Supabase debe tener DESACTIVADA la confirmación por correo
+// (Authentication → Sign In / Providers → Confirm email). Si está activada,
+// signUp no devuelve sesión y esta pantalla lo dice en lugar de dejar al
+// paciente mirando una rueda que no acaba.
+//
+// LOS TRES CAMINOS QUE PEDÍA EL PRODUCTO
+//   · particular        → se registra y entra como gratuito.
+//   · paciente de clínica → añade el código de seis letras que le dio su
+//     fisio, y queda enlazado a su ficha con premium incluido.
+//   · desde /r/[token]  → si viene de su guía, el token enlaza igual que antes.
 
-import { useRef, useState } from 'react'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/app/lib/supabase'
 
-/** Tras un envío correcto, Supabase tampoco deja repetir de inmediato. */
-const ESPERA_TRAS_ENVIO = 60
+const MIN_CLAVE = 8
 
-/** Saca los segundos del mensaje de Supabase; si no los dice, asume un minuto. */
-function segundosDeEspera(mensaje: string): number {
-  const m = mensaje.match(/(\d+)\s*second/i)
-  const n = m ? parseInt(m[1], 10) : NaN
-  return Number.isFinite(n) && n > 0 ? Math.min(n, 300) : ESPERA_TRAS_ENVIO
+/** Pista de enrutado para proxy.ts, nunca una credencial: solo decide si al
+ *  abrir "/" se aterriza en la app o en el panel de la clínica. La pone
+ *  también /mi/callback; aquí se replica porque con contraseña no se pasa
+ *  por allí. */
+function marcarRolPaciente() {
+  const seguro = window.location.protocol === 'https:' ? '; secure' : ''
+  document.cookie = `rudami-rol=paciente; path=/; max-age=31536000; samesite=lax${seguro}`
 }
 
-export function FormularioEntrar({ token, nuevo = false }: { token?: string; nuevo?: boolean }) {
-  const [email, setEmail] = useState('')
-  const [nombre, setNombre] = useState('')
-  const [estado, setEstado] = useState<'inicio' | 'enviando' | 'enviado' | 'error'>('inicio')
-  const [espera, setEspera] = useState(0)
-  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null)
+export function FormularioEntrar({
+  token,
+  modo,
+}: {
+  /** Token de la guía /r/[token], si viene de ahí. */
+  token?: string
+  modo: 'entrar' | 'crear'
+}) {
+  const router = useRouter()
+  const crear = modo === 'crear'
 
-  /**
-   * Cuenta atrás contra un instante futuro, no sumando ticks: el móvil
-   * ralentiza los temporizadores en segundo plano y contando ticks la espera
-   * se alargaría sola. Mismo criterio que el descanso de la sesión guiada.
-   */
-  const arrancarEspera = (segundos: number) => {
-    if (tickRef.current) clearInterval(tickRef.current)
-    setEspera(segundos)
-    const fin = Date.now() + segundos * 1000
-    tickRef.current = setInterval(() => {
-      const quedan = Math.ceil((fin - Date.now()) / 1000)
-      if (quedan > 0) { setEspera(quedan); return }
-      if (tickRef.current) clearInterval(tickRef.current)
-      tickRef.current = null
-      setEspera(0)
-    }, 500)
+  const [nombre, setNombre] = useState('')
+  const [email, setEmail] = useState('')
+  const [clave, setClave] = useState('')
+  const [codigo, setCodigo] = useState('')
+  const [verClave, setVerClave] = useState(false)
+  const [enviando, setEnviando] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [pendienteConfirmar, setPendienteConfirmar] = useState(false)
+
+  /** Enlaza con la clínica, si trae por dónde. Un código malo no debe tirar
+   *  abajo un registro que por lo demás fue bien: se avisa y se sigue. */
+  const enlazarConClinica = async (): Promise<string | null> => {
+    const c = codigo.trim().toUpperCase()
+    if (c) {
+      const { data } = await supabase.rpc('mi_vincular_codigo', { p_codigo: c })
+      if (!data?.ok) {
+        return data?.motivo === 'ya_reclamado'
+          ? 'Ese código ya lo ha usado otra cuenta. Pídele uno nuevo a tu clínica.'
+          : 'El código no es válido o ha caducado. Pídele uno nuevo a tu clínica.'
+      }
+      return null
+    }
+    if (token) {
+      await supabase.rpc('paciente_vincular', { p_token: token })
+    }
+    return null
   }
 
-  const pedirEnlace = async (e: React.FormEvent) => {
+  const enviar = async (e: React.FormEvent) => {
     e.preventDefault()
-    const limpio = email.trim().toLowerCase()
-    if (!limpio || estado === 'enviando' || espera > 0) return
-    if (nuevo && !nombre.trim()) return
+    if (enviando) return
+    const correo = email.trim().toLowerCase()
+    if (!correo || clave.length < (crear ? MIN_CLAVE : 1)) return
+    if (crear && !nombre.trim()) return
 
-    setEstado('enviando')
+    setEnviando(true)
+    setError(null)
 
-    // Lo que tiene que sobrevivir al viaje por el correo va en la URL de
-    // vuelta: el token (para vincular la ficha) o el nombre (para crear la
-    // cuenta). El paciente puede abrir el enlace en otro momento o pestaña.
-    const destino = new URL('/mi/callback', window.location.origin)
-    if (token) destino.searchParams.set('t', token)
-    if (nuevo && nombre.trim()) destino.searchParams.set('n', nombre.trim().slice(0, 80))
-
-    const { error } = await supabase.auth.signInWithOtp({
-      email: limpio,
-      options: { emailRedirectTo: destino.toString() },
-    })
-
-    if (error?.status === 429) {
-      arrancarEspera(segundosDeEspera(error.message))
-      setEstado('error')
-      return
+    if (crear) {
+      const { data, error: err } = await supabase.auth.signUp({ email: correo, password: clave })
+      if (err) {
+        setError(
+          err.message.toLowerCase().includes('already')
+            ? 'Ya existe una cuenta con ese correo. Entra con tu contraseña.'
+            : 'No hemos podido crear la cuenta. Revisa el correo e inténtalo de nuevo.',
+        )
+        setEnviando(false)
+        return
+      }
+      // Sin sesión = la confirmación por correo sigue activada en Supabase.
+      if (!data.session) {
+        setPendienteConfirmar(true)
+        setEnviando(false)
+        return
+      }
+      await supabase.rpc('mi_cuenta_crear', { p_nombre: nombre.trim().slice(0, 80) })
+    } else {
+      const { error: err } = await supabase.auth.signInWithPassword({ email: correo, password: clave })
+      if (err) {
+        setError('Correo o contraseña incorrectos.')
+        setEnviando(false)
+        return
+      }
+      await supabase.rpc('mi_cuenta_crear', { p_nombre: null })
     }
 
-    // A propósito NO se distingue entre "email correcto" y "email desconocido":
-    // decirlo convertiría esta pantalla en un comprobador de qué personas son
-    // pacientes de esta clínica.
-    if (error) { setEstado('error'); return }
-
-    // Enviado: el siguiente tampoco saldrá de inmediato, así que la pantalla
-    // lo dice desde ya en vez de dejar que lo descubran a base de pulsar.
-    arrancarEspera(ESPERA_TRAS_ENVIO)
-    setEstado('enviado')
+    const avisoCodigo = await enlazarConClinica()
+    marcarRolPaciente()
+    // refresh() antes de navegar: las pantallas de /mi son de servidor y
+    // tienen que volver a pedir los datos ya con la sesión puesta.
+    router.refresh()
+    router.push(avisoCodigo ? '/mi/perfil' : '/mi')
+    if (avisoCodigo) setError(avisoCodigo)
+    setEnviando(false)
   }
 
-  if (estado === 'enviado') {
+  if (pendienteConfirmar) {
     return (
       <div className="mi-entrar-ok">
-        <p className="mi-entrar-t">Revisa tu correo</p>
+        <p className="mi-entrar-t">Falta confirmar tu correo</p>
         <p className="mi-nota">
-          Te hemos enviado un enlace a <strong>{email.trim().toLowerCase()}</strong>. Ábrelo
-          desde este mismo móvil y entrarás directamente.
+          Tu cuenta se ha creado, pero este sitio tiene activada la confirmación
+          por correo, así que hay que abrir el enlace que acabamos de enviarte a{' '}
+          <strong>{email.trim().toLowerCase()}</strong>.
         </p>
         <p className="mi-nota mi-nota-suave">
-          ¿No lo ves? Mira en spam. Puede tardar un minuto en llegar, y{' '}
-          <strong>pedir otro no acelera nada</strong>: cada intento reinicia la espera.
-        </p>
-        <p className="mi-nota mi-nota-suave">
-          {espera > 0 ? (
-            <>Podrás pedir un enlace nuevo en <strong>{espera} s</strong>.</>
-          ) : (
-            <button type="button" className="mi-link" onClick={() => setEstado('inicio')}>
-              Pedir otro enlace o probar con otra dirección
-            </button>
-          )}
+          Si estás probando la app y el correo no llega, díselo a tu clínica: es
+          un ajuste del servidor, no un fallo tuyo.
         </p>
       </div>
     )
   }
 
-  const bloqueado = estado === 'enviando' || espera > 0
-  const faltanDatos = !email.trim() || (nuevo && !nombre.trim())
+  const claveCorta = crear && clave.length > 0 && clave.length < MIN_CLAVE
+  const faltan = !email.trim() || !clave || (crear && (!nombre.trim() || claveCorta))
 
   return (
-    <form onSubmit={pedirEnlace} className="mi-entrar-form">
-      {nuevo && (
+    <form onSubmit={enviar} className="mi-entrar-form">
+      {crear && (
         <div className="ap-form-campo">
-          <label htmlFor="nombre-paciente" className="mi-entrar-label">Tu nombre</label>
+          <label htmlFor="ac-nombre" className="mi-entrar-label">Tu nombre</label>
           <input
-            id="nombre-paciente"
-            className="mi-input"
-            type="text"
-            autoComplete="given-name"
-            required
-            maxLength={80}
-            placeholder="¿Cómo te llamamos?"
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            disabled={bloqueado}
+            id="ac-nombre" className="mi-input" type="text" autoComplete="given-name"
+            required maxLength={80} placeholder="¿Cómo te llamamos?"
+            value={nombre} onChange={(e) => setNombre(e.target.value)} disabled={enviando}
           />
         </div>
       )}
 
       <div className="ap-form-campo">
-        <label htmlFor="email-paciente" className="mi-entrar-label">Tu correo electrónico</label>
+        <label htmlFor="ac-email" className="mi-entrar-label">Tu correo electrónico</label>
         <input
-          id="email-paciente"
-          className="mi-input"
-          type="email"
-          inputMode="email"
-          autoComplete="email"
-          required
-          placeholder="tu@correo.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          disabled={bloqueado}
+          id="ac-email" className="mi-input" type="email" inputMode="email"
+          autoComplete="email" required placeholder="tu@correo.com"
+          value={email} onChange={(e) => setEmail(e.target.value)} disabled={enviando}
         />
       </div>
+
+      <div className="ap-form-campo">
+        <label htmlFor="ac-clave" className="mi-entrar-label">Contraseña</label>
+        <input
+          id="ac-clave" className="mi-input" type={verClave ? 'text' : 'password'}
+          autoComplete={crear ? 'new-password' : 'current-password'} required
+          placeholder={crear ? `Al menos ${MIN_CLAVE} caracteres` : 'Tu contraseña'}
+          value={clave} onChange={(e) => setClave(e.target.value)} disabled={enviando}
+        />
+        <button type="button" className="mi-link" style={{ alignSelf: 'flex-start', marginTop: 8 }}
+          onClick={() => setVerClave((v) => !v)}>
+          {verClave ? 'Ocultar contraseña' : 'Ver contraseña'}
+        </button>
+        {claveCorta && (
+          <p className="ap-barra-txt">La contraseña necesita al menos {MIN_CLAVE} caracteres.</p>
+        )}
+      </div>
+
+      {crear && !token && (
+        <div className="ap-form-campo">
+          <label htmlFor="ac-codigo" className="mi-entrar-label">
+            Código de tu clínica <span style={{ textTransform: 'none', letterSpacing: 0 }}>(opcional)</span>
+          </label>
+          <input
+            id="ac-codigo" className="mi-input" type="text" inputMode="text"
+            autoCapitalize="characters" maxLength={6} placeholder="Ej.: K7M2QX"
+            style={{ textTransform: 'uppercase', letterSpacing: '.18em', fontWeight: 600 }}
+            value={codigo} onChange={(e) => setCodigo(e.target.value.toUpperCase())} disabled={enviando}
+          />
+          <p className="ap-barra-txt">
+            Si tu fisioterapeuta te ha dado un código, ponlo aquí y tendrás tu plan
+            y tus sesiones desde el primer día, sin pagar nada.
+          </p>
+        </div>
+      )}
+
       {token && (
         <p className="mi-nota mi-nota-suave" style={{ marginTop: 8 }}>
-          Usa el mismo correo que le diste a tu clínica.
+          Al crear la cuenta quedará enlazada con el plan que te mandó tu clínica.
         </p>
       )}
 
-      <button type="submit" className="mi-btn" disabled={bloqueado || faltanDatos}>
-        {espera > 0
-          ? `Espera ${espera} s`
-          : estado === 'enviando'
-            ? 'Enviando…'
-            : nuevo ? 'Crear mi cuenta' : 'Enviarme el enlace'}
+      <button type="submit" className="mi-btn" disabled={enviando || faltan}>
+        {enviando ? 'Un momento…' : crear ? 'Crear mi cuenta' : 'Entrar'}
       </button>
 
-      {estado === 'error' && espera > 0 && (
-        <p className="mi-error" role="alert">
-          Has pedido varios enlaces seguidos y el sistema de correo los bloquea un
-          rato. Espera <strong>{espera} segundos</strong> y vuelve a intentarlo.
-          Mientras tanto, revisa tu bandeja: puede que el primero ya haya llegado.
-        </p>
-      )}
-      {estado === 'error' && espera === 0 && (
-        <p className="mi-error" role="alert">
-          No hemos podido enviar el correo ahora mismo. Inténtalo en un minuto.
-        </p>
-      )}
+      {error && <p className="mi-error" role="alert">{error}</p>}
     </form>
   )
 }

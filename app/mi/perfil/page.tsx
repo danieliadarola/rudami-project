@@ -12,6 +12,7 @@ import { fechaLarga } from '@/app/lib/paciente/fechas'
 import { BarraMi } from '@/components/paciente/BarraMi'
 import { Cabecera } from '@/components/paciente/Cabecera'
 import { Objetivo } from '@/components/paciente/Objetivo'
+import { CodigoClinica } from '@/components/paciente/CodigoClinica'
 import {
   IcoAjustes, IcoAyuda, IcoChevron, IcoChispa, IcoClinica, IcoEstrella, IcoGrafica, IcoPerfil, IcoSalir, IcoWhatsapp, IcoCheck,
 } from '@/components/paciente/Iconos'
@@ -142,6 +143,7 @@ export default async function PaginaPerfil() {
         <nav className="ap-menu" aria-label="Opciones del perfil">
           <Link href="/mi/perfil/ajustes" className="ap-menu-item"><IcoPerfil size={20} /> Mis datos personales <IcoChevron className="chev" /></Link>
           <Link href="/mi/progreso" className="ap-menu-item"><IcoGrafica size={20} /> Mi progreso <IcoChevron className="chev" /></Link>
+          {cuenta.tipo === 'independiente' && <CodigoClinica />}
           <Link href="/mi/plan" className="ap-menu-item">
             <IcoEstrella size={20} />
             <span>Plan y suscripción<span className="sub">{cuenta.plan.estado === 'clinica' ? 'Incluido por tu clínica' : cuenta.plan.estado === 'premium' ? 'Premium' : 'Free'}</span></span>

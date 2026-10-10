@@ -108,6 +108,32 @@ botón Premium registra interés y lo dice. Fases 3 y 4 (parcial) hechas.
 **De la v2 (16/09):** Stripe. (Bandeja de solicitudes en `/citas`, avisos de
 la clínica, service worker, iconos y keep-alive por cron de Vercel: hechos.)
 
+## Cómo entra un paciente (cambiado el 10/10/2026)
+
+La app del paciente nació **sin contraseñas**: el correo era la credencial.
+En la práctica eso la dejó inservible, porque el remitente que trae Supabase
+de serie solo entrega a direcciones del equipo del proyecto y con un tope de
+muy pocos envíos por hora. Ahora hay tres caminos y ninguno depende del correo:
+
+1. **Particular**: se registra con nombre, correo y contraseña. Entra como
+   gratuito y puede pasar a premium.
+2. **Paciente de clínica**: el fisio genera un **código de seis caracteres**
+   desde la ficha del paciente (tarjeta «Acceso a la app»), se lo dicta o se
+   lo manda por WhatsApp, y el paciente lo escribe al registrarse. Queda
+   enlazado a su ficha con premium incluido. Un solo uso, caduca a 30 días.
+   También se puede canjear después, desde Perfil.
+3. **Desde su guía** `/r/[token]`: sigue funcionando como antes.
+
+⚠️ **REQUISITO DE CONFIGURACIÓN**: en Supabase, Authentication → Sign In /
+Providers, la opción **«Confirm email» tiene que estar DESACTIVADA**. Si está
+activada, `signUp` no devuelve sesión y la pantalla pide confirmar por correo,
+que es justo lo que no funciona. Hay que volver a activarla el día que haya
+Resend y pacientes reales.
+
+**Pendiente de este bloque**: no hay «he olvidado mi contraseña» (necesita
+correo). Mientras tanto, el fisio puede regenerar un código o cambiar la
+contraseña desde el panel de Supabase.
+
 **Configuración de Supabase que sigue pendiente de hacer a mano (gratis):**
 - Authentication → URL Configuration → Redirect URLs: añadir
   `https://rudami-project.vercel.app/mi/callback**` y
