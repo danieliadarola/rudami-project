@@ -13,9 +13,10 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { FormularioEntrar } from './FormularioEntrar'
+import { OlvideClave } from './OlvideClave'
 
 export function Bienvenida({ token, error, nuevo }: { token?: string; error?: string; nuevo?: boolean }) {
-  const [modo, setModo] = useState<'portada' | 'entrar' | 'crear'>(
+  const [modo, setModo] = useState<'portada' | 'entrar' | 'crear' | 'olvide'>(
     token || nuevo ? 'crear' : 'portada',
   )
 
@@ -28,6 +29,19 @@ export function Bienvenida({ token, error, nuevo }: { token?: string; error?: st
         : error
           ? 'No hemos podido validar el enlace. Crea tu cuenta con contraseña, es más rápido.'
           : null
+
+  if (modo === 'olvide') {
+    return (
+      <div className="ap-bienvenida-cuerpo">
+        <h1>Recuperar tu contraseña</h1>
+        <p className="mi-nota">
+          Te mandamos un enlace al correo con el que te registraste para que
+          elijas una nueva.
+        </p>
+        <OlvideClave onVolver={() => setModo('entrar')} />
+      </div>
+    )
+  }
 
   if (modo === 'portada') {
     return (
@@ -61,7 +75,11 @@ export function Bienvenida({ token, error, nuevo }: { token?: string; error?: st
 
       {mensajeError && <p className="mi-error" role="alert">{mensajeError}</p>}
 
-      <FormularioEntrar token={token} modo={creando ? 'crear' : 'entrar'} />
+      <FormularioEntrar
+        token={token}
+        modo={creando ? 'crear' : 'entrar'}
+        onOlvide={creando ? undefined : () => setModo('olvide')}
+      />
 
       <p className="ap-bienvenida-pie">
         {creando ? (

@@ -44,10 +44,13 @@ function marcarRolPaciente() {
 export function FormularioEntrar({
   token,
   modo,
+  onOlvide,
 }: {
   /** Token de la guía /r/[token], si viene de ahí. */
   token?: string
   modo: 'entrar' | 'crear'
+  /** Solo al entrar: abre la pantalla de recuperar contraseña. */
+  onOlvide?: () => void
 }) {
   const router = useRouter()
   const crear = modo === 'crear'
@@ -214,6 +217,14 @@ export function FormularioEntrar({
       <button type="submit" className="mi-btn" disabled={enviando || faltan}>
         {enviando ? 'Un momento…' : crear ? 'Crear mi cuenta' : 'Entrar'}
       </button>
+
+      {!crear && onOlvide && (
+        <p style={{ textAlign: 'center', marginTop: 14 }}>
+          <button type="button" className="mi-link" onClick={onOlvide}>
+            He olvidado mi contraseña
+          </button>
+        </p>
+      )}
 
       {error && <p className="mi-error" role="alert">{error}</p>}
     </form>

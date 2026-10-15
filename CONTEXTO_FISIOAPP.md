@@ -130,9 +130,16 @@ activada, `signUp` no devuelve sesión y la pantalla pide confirmar por correo,
 que es justo lo que no funciona. Hay que volver a activarla el día que haya
 Resend y pacientes reales.
 
-**Pendiente de este bloque**: no hay «he olvidado mi contraseña» (necesita
-correo). Mientras tanto, el fisio puede regenerar un código o cambiar la
-contraseña desde el panel de Supabase.
+**«He olvidado mi contraseña»** (15/10/2026): desde la pantalla de acceso se
+pide un enlace y se aterriza en `/mi/clave`, que es pública en `proxy.ts` por
+el mismo motivo que `/mi/callback`.
+
+⚠️ Esto **sí depende del correo** y no hay forma de evitarlo: cambiar una
+contraseña que nadie recuerda exige demostrar que el correo es tuyo. Con el
+remitente actual, a un paciente real no le llegará. Y **el código de
+invitación no sirve de salida**: enlaza una cuenta nueva con una ficha, pero a
+quien ya está enlazado no le desbloquea nada. Hasta que haya Resend, la única
+vía es que la clínica le cambie la contraseña desde el panel de Supabase.
 
 **Configuración de Supabase que sigue pendiente de hacer a mano (gratis):**
 - Authentication → URL Configuration → Redirect URLs: añadir

@@ -27,13 +27,15 @@ const RAIZ_PACIENTE = '/mi'
 /** Dónde se rebota al paciente sin sesión. */
 const PUERTA_PACIENTE = '/mi/entrar'
 /**
- * Las dos rutas de /mi que tienen que funcionar SIN sesión:
- *  · /mi/entrar   — es donde se pide el enlace de acceso.
+ * Las rutas de /mi que tienen que funcionar SIN sesión:
+ *  · /mi/entrar   — es donde se crea la cuenta o se entra.
  *  · /mi/callback — es donde aterriza el enlace del correo. Protegerla sería
  *    un bucle: el paciente aún no tiene sesión precisamente porque viene a
  *    canjear el código que se la va a dar.
+ *  · /mi/clave    — donde aterriza el enlace de "olvidé mi contraseña", por
+ *    el mismo motivo: todavía no ha podido entrar.
  */
-const RUTAS_PACIENTE_PUBLICAS = [PUERTA_PACIENTE, '/mi/callback']
+const RUTAS_PACIENTE_PUBLICAS = [PUERTA_PACIENTE, '/mi/callback', '/mi/clave']
 
 /**
  * Pista de enrutado, NUNCA de autorización.
